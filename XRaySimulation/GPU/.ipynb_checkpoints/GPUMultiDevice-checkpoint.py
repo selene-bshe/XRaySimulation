@@ -3,6 +3,7 @@ from numba import cuda
 
 from XRaySimulation.GPU import GPUSingleDevice
 
+
 def get_multicrystal_reflection(kin_grid,
                                 spectrum_in,
                                 device_list,
@@ -32,8 +33,6 @@ def get_multicrystal_reflection(kin_grid,
     :return:
     """
 
-    # Check if the kin is forma
-    
     if batch_num == 1:
         output_dict = _get_multicrystal_reflection(kin_grid=kin_grid,
                                                    spectrum_in=spectrum_in,
