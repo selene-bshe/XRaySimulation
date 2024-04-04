@@ -1965,6 +1965,59 @@ def get_square_grating_diffraction_scalar(kout_grid,
 
 
 @cuda.jit('void'
+          '(float64[:,:], complex128[:],'
+          'float64[:],'
+          'float64[:,:],'
+          'float64[:], float64,'
+          'int64)')
+def get_perfect_mirror_scalar(kout_grid,
+                              efield_grid,
+                              klen_grid,
+                              kin_grid,
+                              mirror_n,
+                              mirror_n_dot_r,
+                              num):
+    """
+    This function calculate the reflected X-ray pulse from a perfect mirror
+    It should be noted that in this case, I am not considering the reflectivity
+    from the mirror. It is literally a perfect mirror which does not exist.
+
+    :param kout_grid: The output momentum grid
+    :param efield_grid: The output coefficient for each monochromatic component
+    :param klen_grid: The length of each incident wave vector. Notice that this value will update for the grating.
+    :param kin_grid: The incident wave vector grid.
+    :param mirror_n: The normal direction of the mirror pointing to the inner side of the mirror
+    :param mirror_n_dot_r: n \dot r. r is a point on the surface of the mirror.
+    :param num: The number of momenta to calculate.
+    :return: None
+    """
+
+    row = cuda.grid(1)
+    if row < num:
+        # Step 1: Calculate the effect of the grating on magnitude and phase for each component
+        kDotn = (mirror_n[0] * kout_grid[row, 0] +
+                 mirror_n[1] * kout_grid[row, 1] +
+                 mirror_n[2] * kout_grid[row, 2])
+
+        factor1 = 2 * mirror_n_dot_r * kDotn
+
+        # Factor from the base
+        # factor = complex(math.cos(factor1), math.sin(factor1))
+
+        # Step 2: Update the coefficient
+        efield_grid[row] = complex(math.cos(factor1), math.sin(factor1)) * efield_grid[row]
+
+        # Step 3: Update the momentum and the length of the momentum
+        kout_grid[row, 0] = kin_grid[row, 0] - 2 * kDotn * mirror_n[0]
+        kout_grid[row, 1] = kin_grid[row, 1] - 2 * kDotn * mirror_n[1]
+        kout_grid[row, 2] = kin_grid[row, 2] - 2 * kDotn * mirror_n[2]
+
+        klen_grid[row] = math.sqrt(kout_grid[row, 0] * kout_grid[row, 0] +
+                                   kout_grid[row, 1] * kout_grid[row, 1] +
+                                   kout_grid[row, 2] * kout_grid[row, 2])
+
+
+@cuda.jit('void'
           '(complex128[:,:],'
           'float64[:,:],'
           'float64[:], complex128, float64,'
