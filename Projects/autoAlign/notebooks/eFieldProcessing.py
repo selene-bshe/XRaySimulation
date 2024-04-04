@@ -3,7 +3,7 @@ import sys
 
 sys.path.append("../../../../XRaySimulation")
 
-from XRaySimulation import Pulse, DeviceSimu, util, Crystal
+from XRaySimulation import DeviceSimu
 import XRaySimulation.GPU.GPUMultiDevice as gMultiDevice
 
 
@@ -68,18 +68,16 @@ def get_efield_with_interpolation(observation_point, device_list, gaussian_pulse
     # 3. Get the probe pulse electric field and see its spatial overlap with the TG fringe
     #        for this purpose, the interpolation is within the xpp y xpp z plane, or the x-z plane in this simulation
 
+
+    # Below, I try to implement two kinds of interpolation
+    # one is the 2D interpolation. The interpolation dimension is the same as that
+    # explained above. The other one is the 3D interpolation.
+    # The 3D interpolation is more time-consuming and more accurate.
+    # Ideally, in one simulation, I would need to compare the two cases and
+    # choose the correct one to implement.
+
+    # This function is so fundamental, I believe I need to create a basic function
+    # for this purpose.
     if flag_interpolation:
-        if interpolation_purpose == "vcc":
-            pass
-        elif interpolation_purpose == "TG pump":
-            pass
-        elif interpolation_purpose == "TG probe":
-            pass
-        elif interpolation_purpose == "xyz":
-            pass
-        elif interpolation_purpose == "beam frame":
-            pass
-        else:
-            print("No interpolation is applied. Currently this function cannot handle a general interpolation request.")
-            print("Please check the source code for this function to understand the current capability boundary.")
-            
+
+        pass

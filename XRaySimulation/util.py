@@ -951,7 +951,9 @@ def get_coordinate(nx, ny, nz, dx, dy, dz, k0=0):
     EyCoor = wavevec_to_kev(kyCoor)
     EzCoor = wavevec_to_kev(kzCoor - k0)
 
-    return xCoor, yCoor, zCoor, tCoor, kxCoor, kyCoor, kzCoor, ExCoor, EyCoor, EzCoor
+    return (xCoor, yCoor, zCoor, tCoor,
+            kxCoor, kyCoor, kzCoor,
+            ExCoor, EyCoor, EzCoor)
 
 
 # ----------------------------------------------------------------------------

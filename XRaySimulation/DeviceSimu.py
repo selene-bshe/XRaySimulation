@@ -1,7 +1,8 @@
 import numpy as np
-from numba import jit
 
 from XRaySimulation import util
+from scipy import interpolate
+from skimage.restoration import unwrap_phase
 
 two_pi = 2. * np.pi
 
@@ -506,7 +507,7 @@ def align_channel_cut_dynamical_bragg_reflection(channelcut,
     # Rotate according to the geometric Bragg angle
     geo_Bragg_angle = util.get_bragg_angle(wave_length=two_pi / np.linalg.norm(kin),
                                            plane_distance=two_pi / np.linalg.norm(channelcut.crystal_list[0].h))
-    #print("The geometric Bragg angle is {:.2f} deg".format(np.rad2deg(geo_Bragg_angle)))
+    # print("The geometric Bragg angle is {:.2f} deg".format(np.rad2deg(geo_Bragg_angle)))
 
     # Rotate the channel-cut according to the geometry of the channel-cut crystal
     if channelcut.first_crystal_loc == "lower left":
@@ -1159,3 +1160,137 @@ def get_flat_wavevector_array(kx, ky, kz):
     kVecArray[:, :, :, 2] = kz[np.newaxis, np.newaxis, :]
 
     return np.reshape(kVecArray, (nx * ny * nz, 3))
+
+
+def get_interpolated_eField(kvec_array, coor_dict, efield_array, k0, mode, coor_info_new=None, affine_mat=None):
+    # Because almost for sure we have the screen facing towards the Z direction.
+    # I only consider the interpolation that generate the electric field in the x,y,t or x,y,z coordinate
+    # the same coordiante as the inital pulse.
+    # For the theory, find it in Haoyuan Li's thesis
+
+    # The purpose of this interpolation is multiple
+    # 1. Demonstrate the pulse front tilt issue after asymmetric channel-cut crystals
+    #        for this purpose, the interpolation is within the xpp x xpp z plane, or the y-z plane in this simulation
+    # 2. Get the accurate electric field and use that to calculate the TG fringe
+    #        for this purpose, the interpolation is within the xpp x xpp z plane, or the y-z plane in this simulation
+    # 3. Get the probe pulse electric field and see its spatial overlap with the TG fringe
+    #        for this purpose, the interpolation is within the xpp y xpp z plane, or the x-z plane in this simulation
+
+    # Below, I try to implement two kinds of interpolation
+    # one is the 2D interpolation. The interpolation dimension is the same as that
+    # explained above. The other one is the 3D interpolation.
+    # The 3D interpolation is more time-consuming and more accurate.
+    # Ideally, in one simulation, I would need to compare the two cases and
+    # choose the correct one to implement.
+
+    # This function is so fundamental, I believe I need to create a basic function
+    # for this purpose.
+
+    # 2024-04-04 implement the 3D interpolation with low efficiency first
+    # Even though the calculation is less efficient, it is more universal and maybe more compatible with the simulation
+    if (mode == "vcc") or (mode == "yz"):
+        pass
+        print("No interpolation is implemented. This option is not implemented yet.")
+    elif mode == "TG pump":
+        print("No interpolation is implemented. This option is not implemented yet.")
+        pass
+    elif mode == "TG probe":
+        print("No interpolation is implemented. This option is not implemented yet.")
+        pass
+    elif mode == "xyz 3D":
+        print("Interpolate the electric field such that after the intpolation")
+        print("the three axes of the array are parallel to that of the x,y,z axes.")
+        # For VCC pulse, we want to interpolate within the yz plane, or the xpp x - xpp z plane.
+
+        oldShape = np.array(efield_array.shape)
+
+        # Step 1: Get the interpolation matrix
+        # Get the spatial grid according to my note
+        u1 = (kvec_array[oldShape[0] // 2 + 1, oldShape[1] // 2, oldShape[2] // 2]
+              - kvec_array[oldShape[0] // 2 - 1, oldShape[1] // 2, oldShape[2] // 2]) / 2.
+        u2 = (kvec_array[oldShape[0] // 2, oldShape[1] // 2 + 1, oldShape[2] // 2]
+              - kvec_array[oldShape[0] // 2, oldShape[1] // 2 - 1, oldShape[2] // 2]) / 2.
+        u3 = (kvec_array[oldShape[0] // 2, oldShape[1] // 2, oldShape[2] // 2 + 1]
+              - kvec_array[oldShape[0] // 2, oldShape[1] // 2, oldShape[2] // 2 - 1]) / 2.
+
+        u_mat = np.zeros((3, 3))
+        u_mat[0] = u1
+        u_mat[1] = u2
+        u_mat[2] = u3
+        u_mat /= 2 * np.pi
+        u_mat_inv = np.linalg.inv(u_mat)
+
+        print("The ")
+        # Get the position grid for interpolation
+        if coor_info_new:
+            # Calculate the new coordinate if it is specified
+            print("Currently, I have not implemented the function to work with specified coordinate information.")
+            pass
+        else:
+            # Otherwise, calculate the new coordinate by analyzing the current situation.
+            # step 1: Get the boundary of old space in the new coordinate system
+            corners = np.array([[coor_dict['xcoor'][0], coor_dict['ycoor'][0], coor_dict['zcoor'][0]],
+                                [coor_dict['xcoor'][0], coor_dict['ycoor'][0], coor_dict['zcoor'][-1]],
+                                [coor_dict['xcoor'][0], coor_dict['ycoor'][-1], coor_dict['zcoor'][0]],
+                                [coor_dict['xcoor'][0], coor_dict['ycoor'][-1], coor_dict['zcoor'][-1]],
+                                [coor_dict['xcoor'][-1], coor_dict['ycoor'][0], coor_dict['zcoor'][0]],
+                                [coor_dict['xcoor'][-1], coor_dict['ycoor'][0], coor_dict['zcoor'][-1]],
+                                [coor_dict['xcoor'][-1], coor_dict['ycoor'][-1], coor_dict['zcoor'][0]],
+                                [coor_dict['xcoor'][-1], coor_dict['ycoor'][-1], coor_dict['zcoor'][-1]],
+                                ])
+            new_corners = np.dot(u_mat_inv, corners)
+
+            # Step 2: Use the original resolution. Get the new pixel number
+            dx = coor_dict['xcoor'][1] - coor_dict['xcoor'][0]
+            dy = coor_dict['ycoor'][1] - coor_dict['ycoor'][0]
+            dz = coor_dict['zcoor'][1] - coor_dict['zcoor'][0]
+
+            (nx, ny, nz) = (np.max(new_corners, axis=0) - np.min(new_corners, axis=0)) / np.array([dx, dy, dz])
+
+            # Get the new coordinate system
+            (xCoor, yCoor, zCoor, tCoor,
+             kxCoor, kyCoor, kzCoor,
+             ExCoor, EyCoor, EzCoor) = util.get_coordinate(nx=nx, ny=ny, nz=nz,
+                                                           dx=dx, dy=dy, dz=dz,
+                                                           k0=np.linalg.norm(k0))
+
+            new_coor_dict = {'xCoor': xCoor, 'yCoor': yCoor, 'zCoor': zCoor, 'tCoor': tCoor,
+                             'kxCoor': kxCoor, 'kyCoor': kyCoor, 'kzCoor': kzCoor,
+                             'ExCoor': ExCoor, 'EyCoor': EyCoor, 'EzCoor': EzCoor, }
+
+        new_position_grid = np.zeros((nx, ny, nz, 3))
+        new_position_grid[:, :, :, 0] = xCoor[:, np.newaxis, np.newaxis]
+        new_position_grid[:, :, :, 1] = yCoor[np.newaxis, :, np.newaxis]
+        new_position_grid[:, :, :, 2] = zCoor[np.newaxis, np.newaxis, :]
+
+        new_position_grid_for_interpolation = np.reshape(new_position_grid, (nx * ny * nz, 3))
+        del new_position_grid
+        new_position_grid_for_interpolation = np.dot(u_mat, new_position_grid_for_interpolation.T).T
+
+        field_fit_mag = interpolate.interpn(points=(np.arange(-oldShape[0] // 2, oldShape[0] // 2) / oldShape[0],
+                                                    np.arange(-oldShape[1] // 2, oldShape[1] // 2) / oldShape[1],
+                                                    np.arange(-oldShape[2] // 2, oldShape[2] // 2) / oldShape[2],),
+                                            values=np.abs(efield_array),
+                                            xi=new_position_grid_for_interpolation,
+                                            method='linear',
+                                            bounds_error=False,
+                                            fill_value=0.)
+
+        field_fit_phase = interpolate.interpn(points=(np.arange(-oldShape[0] // 2, oldShape[0] // 2) / oldShape[0],
+                                                      np.arange(-oldShape[1] // 2, oldShape[1] // 2) / oldShape[1],
+                                                      np.arange(-oldShape[2] // 2, oldShape[2] // 2) / oldShape[2],),
+                                              values=unwrap_phase(np.angle(efield_array)),
+                                              xi=new_position_grid_for_interpolation,
+                                              method='linear',
+                                              bounds_error=False,
+                                              fill_value=0.)
+
+        field_fit = field_fit_mag * np.exp(1.j * field_fit_phase)
+        field_fit = np.reshape(field_fit, (nx, ny, nz))
+        return field_fit, new_coor_dict
+
+    elif mode == "beam frame 3D":
+        pass
+    else:
+        print("No interpolation is applied. Currently this function cannot handle a general interpolation request.")
+        print("Please check the source code for this function to understand the current capability boundary.")
