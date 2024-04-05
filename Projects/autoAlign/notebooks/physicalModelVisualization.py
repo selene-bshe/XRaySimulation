@@ -228,7 +228,7 @@ def showSDandTGtrajectory(simulation_summary):
     plt.show()
 
 
-def show_field_spectrum_after_crystals_xz_and_z_slice(summary, coordinate_container):
+def show_field_spectrum_xz_and_z_slice(summary, tag_list, coordinate_container):
     # Show the calcluation result
     # It seems that we can also easily make the following into a single function to reduce the repetition of the code
 
@@ -237,7 +237,7 @@ def show_field_spectrum_after_crystals_xz_and_z_slice(summary, coordinate_contai
     fig.set_figheight(6)
     fig.set_figwidth(10)
 
-    axes[0, 0].imshow(summary['spectrum yz'], aspect='auto', cmap='jet',
+    axes[0, 0].imshow(summary[tag_list[0]], aspect='auto', cmap='jet',
                       extent=[coordinate_container['EzCoor'][0] * 1000,
                               coordinate_container['EzCoor'][-1] * 1000,
                               coordinate_container['EyCoor'][0] * 1000,
@@ -252,7 +252,7 @@ def show_field_spectrum_after_crystals_xz_and_z_slice(summary, coordinate_contai
     axes[0, 1].set_ylabel("I(Q)")
     axes[0, 1].set_title("Spectral Intensity")
 
-    axes[1, 0].imshow(summary['intensity yz'], aspect='auto', cmap='jet',
+    axes[1, 0].imshow(summary[tag_list[1]], aspect='auto', cmap='jet',
                       extent=[coordinate_container['tCoor'][0],
                               coordinate_container['tCoor'][-1],
                               coordinate_container['yCoor'][0],

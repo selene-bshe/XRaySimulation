@@ -1188,16 +1188,7 @@ def get_interpolated_eField(kvec_array, coor_dict, efield_array, k0, mode, coor_
 
     # 2024-04-04 implement the 3D interpolation with low efficiency first
     # Even though the calculation is less efficient, it is more universal and maybe more compatible with the simulation
-    if (mode == "vcc") or (mode == "yz"):
-        pass
-        print("No interpolation is implemented. This option is not implemented yet.")
-    elif mode == "TG pump":
-        print("No interpolation is implemented. This option is not implemented yet.")
-        pass
-    elif mode == "TG probe":
-        print("No interpolation is implemented. This option is not implemented yet.")
-        pass
-    elif mode == "xyz 3D":
+    if mode == "xyz 3D":
         print("Interpolate the electric field such that after the intpolation")
         print("the three axes of the array are parallel to that of the x,y,z axes.")
         # For VCC pulse, we want to interpolate within the yz plane, or the xpp x - xpp z plane.
@@ -1223,9 +1214,13 @@ def get_interpolated_eField(kvec_array, coor_dict, efield_array, k0, mode, coor_
         print("The ")
         # Get the position grid for interpolation
         if coor_info_new:
-            # Calculate the new coordinate if it is specified
-            print("Currently, I have not implemented the function to work with specified coordinate information.")
-            pass
+            nx = coor_info_new['nx'],
+            ny = coor_info_new['ny'],
+            nz = coor_info_new['nz'],
+            dx = coor_info_new['dx'],
+            dy = coor_info_new['dy'],
+            dz = coor_info_new['dz'],
+
         else:
             # Otherwise, calculate the new coordinate by analyzing the current situation.
             # step 1: Get the boundary of old space in the new coordinate system
@@ -1247,16 +1242,18 @@ def get_interpolated_eField(kvec_array, coor_dict, efield_array, k0, mode, coor_
 
             (nx, ny, nz) = (np.max(new_corners, axis=0) - np.min(new_corners, axis=0)) / np.array([dx, dy, dz])
 
-            # Get the new coordinate system
-            (xCoor, yCoor, zCoor, tCoor,
-             kxCoor, kyCoor, kzCoor,
-             ExCoor, EyCoor, EzCoor) = util.get_coordinate(nx=nx, ny=ny, nz=nz,
-                                                           dx=dx, dy=dy, dz=dz,
-                                                           k0=np.linalg.norm(k0))
+        # ---------------------------------------------------
+        # Get the new coordinate system
+        # ---------------------------------------------------
+        (xCoor, yCoor, zCoor, tCoor,
+         kxCoor, kyCoor, kzCoor,
+         ExCoor, EyCoor, EzCoor) = util.get_coordinate(nx=nx, ny=ny, nz=nz,
+                                                       dx=dx, dy=dy, dz=dz,
+                                                       k0=np.linalg.norm(k0))
 
-            new_coor_dict = {'xCoor': xCoor, 'yCoor': yCoor, 'zCoor': zCoor, 'tCoor': tCoor,
-                             'kxCoor': kxCoor, 'kyCoor': kyCoor, 'kzCoor': kzCoor,
-                             'ExCoor': ExCoor, 'EyCoor': EyCoor, 'EzCoor': EzCoor, }
+        new_coor_dict = {'xCoor': xCoor, 'yCoor': yCoor, 'zCoor': zCoor, 'tCoor': tCoor,
+                         'kxCoor': kxCoor, 'kyCoor': kyCoor, 'kzCoor': kzCoor,
+                         'ExCoor': ExCoor, 'EyCoor': EyCoor, 'EzCoor': EzCoor, }
 
         new_position_grid = np.zeros((nx, ny, nz, 3))
         new_position_grid[:, :, :, 0] = xCoor[:, np.newaxis, np.newaxis]
@@ -1290,6 +1287,15 @@ def get_interpolated_eField(kvec_array, coor_dict, efield_array, k0, mode, coor_
         return field_fit, new_coor_dict
 
     elif mode == "beam frame 3D":
+        pass
+    elif (mode == "vcc") or (mode == "yz"):
+        pass
+        print("No interpolation is implemented. This option is not implemented yet.")
+    elif mode == "TG pump":
+        print("No interpolation is implemented. This option is not implemented yet.")
+        pass
+    elif mode == "TG probe":
+        print("No interpolation is implemented. This option is not implemented yet.")
         pass
     else:
         print("No interpolation is applied. Currently this function cannot handle a general interpolation request.")
