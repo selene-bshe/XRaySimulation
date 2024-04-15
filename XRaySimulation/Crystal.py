@@ -343,6 +343,7 @@ class CrystalBlock3D_auto:
                  edge_length=5e4,
                  asymmetry_angle=0.0,
                  source="x-server",
+                 crystal_property=None,
                  ):
         """
 

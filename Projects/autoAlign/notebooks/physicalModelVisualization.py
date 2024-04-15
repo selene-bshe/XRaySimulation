@@ -99,7 +99,7 @@ def showCrystalEdges(simulation_summary):
 
 
 def showSDandTGtrajectory(simulation_summary):
-    fig, axes = plt.subplots(ncols=1, nrows=5)
+    fig, axes = plt.subplots(ncols=1, nrows=6)
 
     fig.set_figheight(20)
     fig.set_figwidth(10)
@@ -224,6 +224,29 @@ def showSDandTGtrajectory(simulation_summary):
     axes[4].set_ylim([-1, 1])
     axes[4].set_xlim([simulation_summary['TG probe']['trajectory'][-3][2] / 1000 - 100,
                       simulation_summary['TG probe']['trajectory'][-3][2] / 1000 + 100])
+
+    # --------------------------------------------------------------------------
+    # Zoom in to the sample region
+
+    # Plot a horizontal reference line
+    axes[5].plot(np.arange(-50 - 100, 700) * 15, np.zeros(850) * 10, c='b', linestyle='--')
+
+    # Plot the miniSD trajectory
+    axes[5].plot(simulation_summary['TG probe']['trajectory'][:, 2] / 1000,
+                 simulation_summary['TG probe']['trajectory'][:, 0] / 1000, 'r')
+
+    axes[5].plot(simulation_summary['TG pump a']['trajectory'][:, 2] / 1000,
+                 simulation_summary['TG pump a']['trajectory'][:, 0] / 1000, 'g')
+
+    axes[5].plot(simulation_summary['TG pump b']['trajectory'][:, 2] / 1000,
+                 simulation_summary['TG pump b']['trajectory'][:, 0] / 1000, 'g')
+
+    axes[5].set_xlabel("z axis (mm)")
+    axes[5].set_ylabel("y axis (mm)")
+    axes[5].set_title('Mirror 1')
+    axes[5].set_ylim([-1, 40])
+    axes[5].set_xlim([simulation_summary['TG probe']['trajectory'][-1][2] / 1000 - 30,
+                      simulation_summary['TG probe']['trajectory'][-1][2] / 1000 + 10])
 
     plt.tight_layout()
     plt.show()

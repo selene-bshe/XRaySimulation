@@ -112,6 +112,23 @@ def rot_mat_in_yz_plane(theta):
 
     return rotmat
 
+def rot_mat_in_xz_plane(theta):
+    """
+    Get a rotation matrix 3x3 for rotation around x axis
+    in the yz plane
+
+    :param theta:
+    :return:
+    """
+    rotmat = np.zeros((3, 3))
+    rotmat[0, 0] = np.cos(theta)
+    rotmat[0, 2] = - np.sin(theta)
+    rotmat[1, 1] = 1.
+    rotmat[2, 0] = np.sin(theta)
+    rotmat[2, 2] = np.cos(theta)
+
+    return rotmat
+
 
 def get_rotmat_around_axis(angleRadian, axis):
     """

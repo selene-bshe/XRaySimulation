@@ -45,6 +45,15 @@ def prepare_beam_optics(g1_position=2e6,
                         "chih_pi": complex(0.46945E-05, -0.11201E-06),
                         "chihbar_pi": complex(0.46945E-05, -0.11201E-06),
                         }
+
+    crystal_property_si111 = {'d': 3.1355 * 1e-4,
+                              "chi0": complex(-0.10826E-04, 0.18209E-06),
+                              "chih_sigma": complex(0.57174E-05, - 0.12694E-06),
+                              "chihbar_sigma": complex(0.57174E-05, - 0.12694E-06),
+                              "chih_pi": complex(0.52222E-05, -0.11545E-06),
+                              "chihbar_pi": complex(0.52222E-05, -0.11545E-06),
+                              }
+
     pre_length = 1e6
 
     my_pulse = Pulse.GaussianPulse3D()
@@ -101,14 +110,27 @@ def prepare_beam_optics(g1_position=2e6,
                                                                       np.sin(TG_mirror_pump_angle_y[1])]))
 
     # Define mirror for the probe pulse
+    # TG_mirror_probe_list = [Crystal.TotalReflectionMirror(surface_point=np.array([0, 0, TG_mirror_probe_position[0]]),
+    #                                                      normal=np.array([-np.cos(TG_mirror_probe_angle[0]),
+    #                                                                       0,
+    #                                                                       np.sin(TG_mirror_probe_angle[0])])),
+    #                        Crystal.TotalReflectionMirror(surface_point=np.array([0, 0, TG_mirror_probe_position[1]]),
+    #                                                      normal=np.array([np.cos(TG_mirror_probe_angle[1]),
+    #                                                                       0,
+    #                                                                       np.sin(TG_mirror_probe_angle[1])]))]
+
     TG_mirror_probe_list = [Crystal.TotalReflectionMirror(surface_point=np.array([0, 0, TG_mirror_probe_position[0]]),
                                                           normal=np.array([-np.cos(TG_mirror_probe_angle[0]),
                                                                            0,
                                                                            np.sin(TG_mirror_probe_angle[0])])),
-                            Crystal.TotalReflectionMirror(surface_point=np.array([0, 0, TG_mirror_probe_position[1]]),
-                                                          normal=np.array([np.cos(TG_mirror_probe_angle[1]),
-                                                                           0,
-                                                                           np.sin(TG_mirror_probe_angle[1])]))]
+                            Crystal.CrystalBlock3D(
+                                h=np.array([- np.pi * 2 / crystal_property_si111['d'], 0, 0], dtype=np.float64),
+                                normal=np.array([1., 0, 0.]),
+                                surface_point=np.array([0, 0, TG_mirror_probe_position[1]]),
+                                thickness=1e4,
+                                chi_dict=crystal_property_si111,
+                                edge_length=2e4,
+                            )]
 
     # -------------------------------------------------------------------------
     #                         VCC branch
@@ -194,6 +216,31 @@ def prepare_beam_optics(g1_position=2e6,
                                                                                              idx]].surface_point),
                                                                                  get_curve=True)
         kout1 = np.copy(kout2)
+
+    # Align the last silicon 111 crystal
+    # Get the output wave-vector before the silicon 111
+    # TG probe
+    device_list = [miniSD_gratings_vcc[0], ]
+    for idx in range(4):
+        device_list += vcc_channel_cuts[idx].crystal_list
+    device_list += [TG_mirror_probe_list[0], ]
+
+    (TG_probe_trajectory,
+     TG_probe_kout_list,
+     TG_probe_ligthPathLength) = DeviceSimu.get_lightpath(device_list=device_list,
+                                                          kin=my_pulse.k0,
+                                                          initial_point=my_pulse.x0,
+                                                          final_plane_point=np.array([0, 0, 100e6]),
+                                                          final_plane_normal=np.array([0, 0, -1]))
+    # Align the silicon 111 with respect to this pulse.
+    angles, reflectivity = DeviceSimu.align_crystal_dynamical_bragg_reflection_xz(crystal=TG_mirror_probe_list[1],
+                                                                                  kin=TG_probe_kout_list[-1],
+                                                                                  rot_direction=1,
+                                                                                  scan_range=0.0005,
+                                                                                  scan_number=10000,
+                                                                                  rot_center=None,
+                                                                                  get_curve=True)
+    # print(angles, reflectivity)
 
     # ---------------------------------------------------------------
     # Change the position of the TG optics according to the input parameters

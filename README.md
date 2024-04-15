@@ -34,6 +34,10 @@ however.
    I want to re-arrange the functions to make the location of each function 
     more reasonable. 
 
+# Not so essential to-do list
+1. Change the auto-alignment behavior
+2. Change the crystal property grab behavior.
+
 # Notice
 ### Optimization
 In this repo, not all the functions are optimized.
