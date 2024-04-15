@@ -237,7 +237,7 @@ def show_field_spectrum_xz_and_z_slice(summary, tag_list, coordinate_container):
     fig.set_figheight(6)
     fig.set_figwidth(10)
 
-    axes[0, 0].imshow(summary[tag_list[0]], aspect='auto', cmap='jet',
+    axes[0, 0].imshow(summary[tag_list[0]]['yz'], aspect='auto', cmap='jet',
                       extent=[coordinate_container['EzCoor'][0] * 1000,
                               coordinate_container['EzCoor'][-1] * 1000,
                               coordinate_container['EyCoor'][0] * 1000,
@@ -247,12 +247,12 @@ def show_field_spectrum_xz_and_z_slice(summary, tag_list, coordinate_container):
     axes[0, 0].set_ylabel("Ex (eV)")
     axes[0, 0].set_title("Spectrum xz projection")
 
-    axes[0, 1].plot(coordinate_container['EzCoor'] * 1e3, summary['spectrum z'])
+    axes[0, 1].plot(coordinate_container['EzCoor'] * 1e3, summary[tag_list[0]]['z'])
     axes[0, 1].set_xlabel("Ez (eV)")
     axes[0, 1].set_ylabel("I(Q)")
     axes[0, 1].set_title("Spectral Intensity")
 
-    axes[1, 0].imshow(summary[tag_list[1]], aspect='auto', cmap='jet',
+    axes[1, 0].imshow(summary[tag_list[1]]['yz'], aspect='auto', cmap='jet',
                       extent=[coordinate_container['tCoor'][0],
                               coordinate_container['tCoor'][-1],
                               coordinate_container['yCoor'][0],
@@ -261,7 +261,7 @@ def show_field_spectrum_xz_and_z_slice(summary, tag_list, coordinate_container):
     axes[1, 0].set_ylabel("x (um)")
     axes[1, 0].set_title("Intensity xz projection")
 
-    axes[1, 1].plot(coordinate_container['tCoor'], summary['intensity z'])
+    axes[1, 1].plot(coordinate_container['tCoor'], summary[tag_list[1]]['z'])
     axes[1, 1].set_xlabel("t (fs)")
     axes[1, 1].set_ylabel("I(t)")
     axes[1, 1].set_title("Intensity")
