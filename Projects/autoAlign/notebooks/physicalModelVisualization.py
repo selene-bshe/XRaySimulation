@@ -1,6 +1,7 @@
-import numpy as np
 import matplotlib.pyplot as plt
+import numpy as np
 from matplotlib import colormaps
+from matplotlib.colors import LogNorm
 
 plt.rcParams.update({'font.size': 14})
 
@@ -228,7 +229,7 @@ def showSDandTGtrajectory(simulation_summary):
     plt.show()
 
 
-def show_field_spectrum_xz_and_z_slice(summary, tag_list, coordinate_container):
+def show_field_spectrum_xz_and_z_slice(summary, tag_list, coordinate_container, img_scale=["linear", 'linear']):
     # Show the calcluation result
     # It seems that we can also easily make the following into a single function to reduce the repetition of the code
 
@@ -237,11 +238,23 @@ def show_field_spectrum_xz_and_z_slice(summary, tag_list, coordinate_container):
     fig.set_figheight(6)
     fig.set_figwidth(10)
 
-    axes[0, 0].imshow(summary[tag_list[0]]['yz'], aspect='auto', cmap='jet',
-                      extent=[coordinate_container['EzCoor'][0] * 1000,
-                              coordinate_container['EzCoor'][-1] * 1000,
-                              coordinate_container['EyCoor'][0] * 1000,
-                              coordinate_container['EyCoor'][-1] * 1000])
+    if img_scale[0] == "linear":
+        axes[0, 0].imshow(summary[tag_list[0]]['yz'], aspect='auto', cmap='jet',
+                          extent=[coordinate_container['EzCoor'][0] * 1000,
+                                  coordinate_container['EzCoor'][-1] * 1000,
+                                  coordinate_container['EyCoor'][0] * 1000,
+                                  coordinate_container['EyCoor'][-1] * 1000])
+    elif img_scale[0] == 'log':
+        axes[0, 0].imshow(summary[tag_list[0]]['yz'], aspect='auto', cmap='jet',
+                          extent=[coordinate_container['EzCoor'][0] * 1000,
+                                  coordinate_container['EzCoor'][-1] * 1000,
+                                  coordinate_container['EyCoor'][0] * 1000,
+                                  coordinate_container['EyCoor'][-1] * 1000],
+                          norm=LogNorm(vmin=np.max(summary[tag_list[0]]['yz']) / 1e5,
+                                       vmax=np.max(summary[tag_list[0]]['yz']), ))
+    else:
+        print("No such option for img_scale")
+        return 0
 
     axes[0, 0].set_xlabel("Ez (eV)")
     axes[0, 0].set_ylabel("Ex (eV)")
@@ -252,11 +265,25 @@ def show_field_spectrum_xz_and_z_slice(summary, tag_list, coordinate_container):
     axes[0, 1].set_ylabel("I(Q)")
     axes[0, 1].set_title("Spectral Intensity")
 
-    axes[1, 0].imshow(summary[tag_list[1]]['yz'], aspect='auto', cmap='jet',
-                      extent=[coordinate_container['tCoor'][0],
-                              coordinate_container['tCoor'][-1],
-                              coordinate_container['yCoor'][0],
-                              coordinate_container['yCoor'][-1]])
+    if img_scale[1] == 'linear':
+        axes[1, 0].imshow(summary[tag_list[1]]['yz'], aspect='auto', cmap='jet',
+                          extent=[coordinate_container['tCoor'][0],
+                                  coordinate_container['tCoor'][-1],
+                                  coordinate_container['yCoor'][0],
+                                  coordinate_container['yCoor'][-1]])
+    elif img_scale[1] == 'log':
+        axes[1, 0].imshow(summary[tag_list[1]]['yz'], aspect='auto', cmap='jet',
+                          extent=[coordinate_container['tCoor'][0],
+                                  coordinate_container['tCoor'][-1],
+                                  coordinate_container['yCoor'][0],
+                                  coordinate_container['yCoor'][-1]],
+                          norm=LogNorm(vmin=np.max(summary[tag_list[1]]['yz']) / 1e5,
+                                       vmax=np.max(summary[tag_list[1]]['yz']),
+                                       ))
+    else:
+        print("No such option for img_scale")
+        return 0
+
     axes[1, 0].set_xlabel("t (fs)")
     axes[1, 0].set_ylabel("x (um)")
     axes[1, 0].set_title("Intensity xz projection")

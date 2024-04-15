@@ -1,8 +1,8 @@
 import numpy as np
-
-from XRaySimulation import util
 from scipy import interpolate
 from skimage.restoration import unwrap_phase
+
+from XRaySimulation import util
 
 two_pi = 2. * np.pi
 
@@ -1220,12 +1220,13 @@ def get_interpolated_eField(kvec_array, coor_dict, efield_array, k0, mode, coor_
             
         # Get the position grid for interpolation
         if coor_info_new:
-            nx = coor_info_new['nx'],
-            ny = coor_info_new['ny'],
-            nz = coor_info_new['nz'],
-            dx = coor_info_new['dx'],
-            dy = coor_info_new['dy'],
-            dz = coor_info_new['dz'],
+            nx = coor_info_new['nx']
+            ny = coor_info_new['ny']
+            nz = coor_info_new['nz']
+            dx = coor_info_new['dx']
+            dy = coor_info_new['dy']
+            dz = coor_info_new['dz']
+
 
         else:
             # Otherwise, calculate the new coordinate by analyzing the current situation.
@@ -1252,7 +1253,7 @@ def get_interpolated_eField(kvec_array, coor_dict, efield_array, k0, mode, coor_
             nz = int(nz)
         
         print(nx, ny, nz)
-        return 0
+        # return 0
     
         # ---------------------------------------------------
         # Get the new coordinate system

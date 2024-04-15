@@ -1,5 +1,6 @@
-import numpy as np
 import sys
+
+import numpy as np
 
 sys.path.append("../../../../XRaySimulation")
 
@@ -19,7 +20,13 @@ def get_statistics(summary_dict, array, tag):
     summary_dict[tag]['y'] = np.square(np.abs(array[:, arrayShape[1] // 2, arrayShape[2] // 2]))
 
 
-def get_efield_with_interpolation(observation_point, device_list, gaussian_pulse, spec_in, kin_grid, coordinate_dict,
+def get_efield_with_interpolation(observation_point,
+                                  device_list,
+                                  gaussian_pulse,
+                                  spec_in,
+                                  kin_grid,
+                                  coordinate_dict,
+                                  coordinate_info_new=None,
                                   flag_interpolation=False,
                                   mode="xyz 3D"):
     (trajectory,
@@ -92,15 +99,15 @@ def get_efield_with_interpolation(observation_point, device_list, gaussian_pulse
                                                                                              input_pulse_shape[2],
                                                                                              3), ),
                                                              coor_dict=coordinate_dict,
-                                                             efield_array=outputField,
+                                                             efield_array=outputDict['field_grid'],
                                                              k0=gaussian_pulse.klen0,
                                                              mode=mode,
-                                                             coor_info_new=None,
+                                                             coor_info_new=coordinate_info_new,
                                                              affine_mat=None)
         del outputDict
         outputDict = {}
         outputDict['field_grid'] = field_fit
-        outputDict['spectrum_grid'] = np.fft.fftshift(np.fft.ifftn(np.fft.fftshift(field_fit)))
+        outputDict['spectrum_grid'] = np.fft.fftshift(np.fft.fftn(np.fft.fftshift(field_fit)))
 
         return outputDict, new_coor_dict
     else:
