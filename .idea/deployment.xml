@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
-  <component name="PublishConfigData" autoUpload="Always" remoteFilesAllowedToDisappearOnAutoupload="false">
+  <component name="PublishConfigData" autoUpload="Always" uploadOnCheckin="a38f76cd-af11-4818-a2bf-b11bcdf1e003" remoteFilesAllowedToDisappearOnAutoupload="false">
+    <option name="myUploadOnCheckinName" value="sdf" />
     <option name="myAutoUpload" value="ALWAYS" />
   </component>
 </project>
