@@ -676,5 +676,5 @@ class CrystalTower_1236:
                 linestyle='--', linewidth=1, label="th", color=self.colors[2])
         ax.plot(self.chi.boundary[:, 2], self.chi.boundary[:, 1],
                 linestyle='--', linewidth=1, label="chi", color=self.colors[3])
-        ax.plot(self.optics.dp_boundary[:, 2], self.optics.dp_boundary[:, 1],
+        ax.plot(self.optics.boundary[:, 2], self.optics.boundary[:, 1],
                 linestyle='-', linewidth=3, label="crystal", color=self.colors[4])

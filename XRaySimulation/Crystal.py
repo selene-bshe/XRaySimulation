@@ -15,13 +15,6 @@ hbar = util.hbar  # This is the reduced planck constant in keV/fs
 c = util.c  # The speed of light in um / fs
 pi = util.pi
 
-# Default incident photon energy
-bragg_energy = 6.95161 * 2  # kev
-wavenumber = util.kev_to_wavevec_length(bragg_energy)
-
-# Some numerical values
-cot_pi_8 = 1. + np.sqrt(2)
-
 
 class ChannelCut:
     def __init__(self,
