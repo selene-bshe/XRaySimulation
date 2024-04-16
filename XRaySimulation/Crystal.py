@@ -157,7 +157,7 @@ class ChannelCut:
 
 class CrystalBlock3D:
     def __init__(self,
-                 h=np.array([0, wavenumber, 0], dtype=np.float64),
+                 h=np.array([0, 1e5, 0], dtype=np.float64),
                  normal=np.array([0., -1., 0.]),
                  surface_point=np.zeros(3, dtype=np.float64),
                  thickness=1e4,
