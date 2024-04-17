@@ -329,7 +329,14 @@ class RotationMotor:
             return False
 
 
-class CrystalTower_1236:
+# --------------------------------------------------------------------
+#    Here, I define a few commonly used motor composition.
+#    Even though they do not have any scientific generality
+#    my gut feeling is that they should have a long enough
+#    lifetime that deserve such a position in the main
+#    body of this simulation package.
+# --------------------------------------------------------------------
+class CrystalTower_x_y_theta_chi:
     """
     This is just a simple realization of the most commonly used crystal tower in the miniSD device.
     Even though initially, I was thinking that I should implement some function that
@@ -337,6 +344,162 @@ class CrystalTower_1236:
     In the end, I realized that it is beyond my current capability.
     Therefore, I guess it is easier for me to just get something more concrete and to give this
     to Khaled sooner.
+    """
+
+    def __init__(self,
+                 channelCut):
+        # Create the instance of each motors
+
+        self.x = LinearMotor(upperLim=12.5 * 1000,
+                             lowerLim=-12.5 * 1000,
+                             res=5,
+                             backlash=100,
+                             feedback_noise_level=1,
+                             speed_um_per_ps=1 * 1000 / 1e12, )
+
+        self.y = LinearMotor(upperLim=25000,
+                             lowerLim=-25000,
+                             res=5,
+                             backlash=100,
+                             feedback_noise_level=1,
+                             speed_um_per_ps=1 * 1000 / 1e12, )
+
+        self.th = RotationMotor(upperLim=np.deg2rad(360),
+                                lowerLim=-np.deg2rad(360),
+                                res=1e-6,
+                                backlash=np.deg2rad(-0.005),
+                                feedback_noise_level=1e-9,
+                                speed_rad_per_ps=0.01 / 1e12, )
+
+        self.chi = RotationMotor(upperLim=np.deg2rad(5),
+                                 lowerLim=-np.deg2rad(5),
+                                 res=1e-6,
+                                 backlash=np.deg2rad(-0.005),
+                                 feedback_noise_level=1e-9,
+                                 speed_rad_per_ps=0.1 / 1e12, )
+
+        self.optics = channelCut
+
+        # ------------------------------------------
+        # Change the motor configuration
+        # ------------------------------------------
+        self.x.physical_positive_direction = np.zeros(3, dtype=np.float64)
+        self.x.physical_positive_direction[1] = 1.0  #
+        # Define the installation location of the x stage
+        x_stage_center = np.zeros(3, dtype=np.float64)
+        self.x.shift(displacement=x_stage_center)
+
+        self.y.physical_positive_direction = np.zeros(3, dtype=np.float64)
+        self.y.physical_positive_direction[0] = 1.0  #
+        # Define the installation location of the x stage
+        y_stage_center = np.zeros(3, dtype=np.float64)
+        y_stage_center[0] = 30 * 1000  # The height of the x stage.
+        self.y.shift(displacement=y_stage_center)
+
+        self.th.physical_deg0direction = np.zeros(3, dtype=np.float64)
+        self.th.physical_deg0direction[1] = 1.0  #
+        self.th.physical_rotation_axis = np.zeros(3, dtype=np.float64)
+        self.th.physical_rotation_axis[0] = 1.0
+        self.th.physical_rotation_center = np.zeros(3, dtype=np.float64)
+
+        # Define the installation location of the x stage
+        th_stage_center = np.zeros(3, dtype=np.float64)
+        th_stage_center[0] = 30 * 1000 + 20 * 1000  # The height of the x stage + the height of the y stage
+        self.th.shift(displacement=th_stage_center)
+
+        self.chi.physical_deg0direction = np.zeros(3, dtype=np.float64)
+        self.chi.physical_deg0direction[0] = 1.0  #
+        self.chi.physical_rotation_axis = np.zeros(3, dtype=np.float64)
+        self.chi.physical_rotation_axis[1] = 1.0
+        self.chi.physical_rotation_center = np.zeros(3, dtype=np.float64)
+        self.chi.physical_rotation_center[0] = 70e3  # The rotation center of the chi stage is high in the air.
+
+        # Define the installation location of the x stage
+        chi_stage_center = np.zeros(3, dtype=np.float64)
+        chi_stage_center[0] = 30 * 1000 + 20 * 1000 + 30e3  # The height of the x stage + the height of the y stage
+        # + the height of the theta stage
+        self.chi.shift(displacement=chi_stage_center)
+
+        # Move the crystal such that the
+        crystalSurface = np.zeros(3, dtype=np.float64)
+        crystalSurface[0] = 30 * 1000 + 20 * 1000 + 30e3 + 20e3
+        self.optics.shift(displacement=crystalSurface)
+
+        # Define the color for the device visualization
+        self.color_list = ['red', 'brown', 'yellow', 'purple', 'black']
+
+    def x_umv(self, target):
+        """
+        If one moves the x stage, then one moves the
+        y stage, theta stage, chi stage, crystal
+        together with it.
+
+        :param target:
+        :return:
+        """
+
+        # Get the displacement vector for the motion
+        displacement = self.x.physical_positive_direction * (target - self.x.control_location)
+
+        # Shift all the motors and crystals with it
+        motion_time = self.x.user_move_abs(target=target, getMotionTime=True)
+        self.y.shift(displacement=displacement, include_boundary=True)
+        self.th.shift(displacement=displacement, include_boundary=True)
+        self.chi.shift(displacement=displacement, include_boundary=True)
+        self.optics.shift(displacement=displacement, include_boundary=True)
+
+    def y_umv(self, target):
+        # Get the displacement vector for the motion
+        displacement = self.y.physical_positive_direction * (target - self.y.control_location)
+
+        # Shift all the motors and crystals with it
+        motion_time = self.y.user_move_abs(target=target, getMotionTime=True)
+        self.th.shift(displacement=displacement, include_boundary=True)
+        self.chi.shift(displacement=displacement, include_boundary=True)
+        self.optics.shift(displacement=displacement, include_boundary=True)
+
+    def th_umv(self, target):
+        # Get the displacement vector for the motion
+        displacement = (target - self.th.control_location)
+
+        # Get the rotation matrix for the stages above the rotation stage
+        rotMat = util.get_rotmat_around_axis(angleRadian=displacement, axis=self.th.physical_rotation_axis)
+
+        # Shift all the motors and crystals with it
+        motion_time = self.th.user_move_abs(target=target, getMotionTime=True)
+        self.chi.rotate_wrt_point(rot_mat=rotMat, ref_point=self.th.physical_rotation_center, include_boundary=True)
+        self.optics.rotate_wrt_point(rot_mat=rotMat, ref_point=self.th.physical_rotation_center, include_boundary=True)
+
+    def chi_umv(self, target):
+        # Get the displacement vector for the motion
+        displacement = (target - self.chi.control_location)
+
+        # Get the rotation matrix for the stages above the rotation stage
+        rotMat = util.get_rotmat_around_axis(angleRadian=displacement, axis=self.chi.physical_rotation_axis)
+
+        # Shift all the motors and crystals with it
+        motion_time = self.chi.user_move_abs(target=target, getMotionTime=True)
+        self.optics.rotate_wrt_point(rot_mat=rotMat, ref_point=self.chi.physical_rotation_center, include_boundary=True)
+
+    def plot_motors(self, ax):
+        # Plot motors and crystals one by one
+        ax.plot(self.x.dp_boundary[:, 2], self.x.dp_boundary[:, 1],
+                linestyle='--', linewidth=1, label="x", color=self.color_list[0])
+        ax.plot(self.y.dp_boundary[:, 2], self.y.dp_boundary[:, 1],
+                linestyle='--', linewidth=1, label="y", color=self.color_list[1])
+        ax.plot(self.th.dp_boundary[:, 2], self.th.dp_boundary[:, 1],
+                linestyle='--', linewidth=1, label="th", color=self.color_list[2])
+        ax.plot(self.chi.dp_boundary[:, 2], self.chi.dp_boundary[:, 1],
+                linestyle='--', linewidth=1, label="chi", color=self.color_list[3])
+        for crystal in self.optics.crystal_list:
+            ax.plot(crystal.boundary[:, 2], crystal.boundary[:, 1],
+                    linestyle='-', linewidth=3, label="crystal", color=self.color_list[4])
+
+
+class CrystalTower_miniSD_Scan:
+    """
+    This is simple implementation of the delay scan tower of the miniSD table.
+    It is composed of an air-bearing stage and a few other stages.
     """
 
     def __init__(self,
