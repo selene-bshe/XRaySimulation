@@ -347,7 +347,7 @@ class CrystalTower_x_y_theta_chi:
     """
 
     def __init__(self,
-                 channelCut):
+                 channelCut, crystal_loc):
         # Create the instance of each motors
 
         self.x = LinearMotor(upperLim=12.5 * 1000,
@@ -423,6 +423,7 @@ class CrystalTower_x_y_theta_chi:
         # Move the crystal such that the
         crystalSurface = np.zeros(3, dtype=np.float64)
         crystalSurface[0] = 30 * 1000 + 20 * 1000 + 30e3 + 20e3
+        crystalSurface += crystal_loc
         self.optics.shift(displacement=crystalSurface)
 
         # Define the color for the device visualization
@@ -503,7 +504,12 @@ class CrystalTower_miniSD_Scan:
     """
 
     def __init__(self,
-                 channelCut):
+                 channelCut1,crystal_loc1,
+                 channelCut2,crystal_loc2):
+        """
+        Install the channel-cut crystal such that it moves with the motors
+        :param channelCut:
+        """
         # Create the instance of each motors
 
         self.x = LinearMotor(upperLim=12.5 * 1000,
@@ -513,19 +519,28 @@ class CrystalTower_miniSD_Scan:
                              feedback_noise_level=1,
                              speed_um_per_ps=1 * 1000 / 1e12, )
 
-        self.y = LinearMotor(upperLim=25000,
-                             lowerLim=-25000,
+        self.x1 = LinearMotor(upperLim=12.5 * 1000,
+                             lowerLim=-12.5 * 1000,
                              res=5,
                              backlash=100,
                              feedback_noise_level=1,
                              speed_um_per_ps=1 * 1000 / 1e12, )
 
-        self.th = RotationMotor(upperLim=np.deg2rad(360),
-                                lowerLim=-np.deg2rad(360),
-                                res=1e-6,
-                                backlash=np.deg2rad(-0.005),
-                                feedback_noise_level=1e-9,
-                                speed_rad_per_ps=0.01 / 1e12, )
+
+        self.th1 = RotationMotor(upperLim=np.deg2rad(360),
+                                 lowerLim=-np.deg2rad(360),
+                                 res=1e-6,
+                                 backlash=np.deg2rad(-0.005),
+                                 feedback_noise_level=1e-9,
+                                 speed_rad_per_ps=0.01 / 1e12, )
+
+        self.th2 = RotationMotor(upperLim=np.deg2rad(360),
+                                 lowerLim=-np.deg2rad(360),
+                                 res=1e-6,
+                                 backlash=np.deg2rad(-0.005),
+                                 feedback_noise_level=1e-9,
+                                 speed_rad_per_ps=0.01 / 1e12, )
+
 
         self.chi = RotationMotor(upperLim=np.deg2rad(5),
                                  lowerLim=-np.deg2rad(5),
@@ -534,7 +549,8 @@ class CrystalTower_miniSD_Scan:
                                  feedback_noise_level=1e-9,
                                  speed_rad_per_ps=0.1 / 1e12, )
 
-        self.optics = channelCut
+        self.optics1 = channelCut1
+        self.optics2 = channelCut2
 
         # ------------------------------------------
         # Change the motor configuration
@@ -552,16 +568,16 @@ class CrystalTower_miniSD_Scan:
         y_stage_center[0] = 30 * 1000  # The height of the x stage.
         self.y.shift(displacement=y_stage_center)
 
-        self.th.physical_deg0direction = np.zeros(3, dtype=np.float64)
-        self.th.physical_deg0direction[1] = 1.0  #
-        self.th.physical_rotation_axis = np.zeros(3, dtype=np.float64)
-        self.th.physical_rotation_axis[0] = 1.0
-        self.th.physical_rotation_center = np.zeros(3, dtype=np.float64)
+        self.th1.physical_deg0direction = np.zeros(3, dtype=np.float64)
+        self.th1.physical_deg0direction[1] = 1.0  #
+        self.th1.physical_rotation_axis = np.zeros(3, dtype=np.float64)
+        self.th1.physical_rotation_axis[0] = 1.0
+        self.th1.physical_rotation_center = np.zeros(3, dtype=np.float64)
 
         # Define the installation location of the x stage
         th_stage_center = np.zeros(3, dtype=np.float64)
         th_stage_center[0] = 30 * 1000 + 20 * 1000  # The height of the x stage + the height of the y stage
-        self.th.shift(displacement=th_stage_center)
+        self.th1.shift(displacement=th_stage_center)
 
         self.chi.physical_deg0direction = np.zeros(3, dtype=np.float64)
         self.chi.physical_deg0direction[0] = 1.0  #
@@ -600,7 +616,7 @@ class CrystalTower_miniSD_Scan:
         # Shift all the motors and crystals with it
         motion_time = self.x.user_move_abs(target=target, getMotionTime=True)
         self.y.shift(displacement=displacement, include_boundary=True)
-        self.th.shift(displacement=displacement, include_boundary=True)
+        self.th1.shift(displacement=displacement, include_boundary=True)
         self.chi.shift(displacement=displacement, include_boundary=True)
         self.optics.shift(displacement=displacement, include_boundary=True)
 
@@ -610,21 +626,21 @@ class CrystalTower_miniSD_Scan:
 
         # Shift all the motors and crystals with it
         motion_time = self.y.user_move_abs(target=target, getMotionTime=True)
-        self.th.shift(displacement=displacement, include_boundary=True)
+        self.th1.shift(displacement=displacement, include_boundary=True)
         self.chi.shift(displacement=displacement, include_boundary=True)
         self.optics.shift(displacement=displacement, include_boundary=True)
 
     def th_umv(self, target):
         # Get the displacement vector for the motion
-        displacement = (target - self.th.control_location)
+        displacement = (target - self.th1.control_location)
 
         # Get the rotation matrix for the stages above the rotation stage
-        rotMat = util.get_rotmat_around_axis(angleRadian=displacement, axis=self.th.physical_rotation_axis)
+        rotMat = util.get_rotmat_around_axis(angleRadian=displacement, axis=self.th1.physical_rotation_axis)
 
         # Shift all the motors and crystals with it
-        motion_time = self.th.user_move_abs(target=target, getMotionTime=True)
-        self.chi.rotate_wrt_point(rot_mat=rotMat, ref_point=self.th.physical_rotation_center, include_boundary=True)
-        self.optics.rotate_wrt_point(rot_mat=rotMat, ref_point=self.th.physical_rotation_center, include_boundary=True)
+        motion_time = self.th1.user_move_abs(target=target, getMotionTime=True)
+        self.chi.rotate_wrt_point(rot_mat=rotMat, ref_point=self.th1.physical_rotation_center, include_boundary=True)
+        self.optics.rotate_wrt_point(rot_mat=rotMat, ref_point=self.th1.physical_rotation_center, include_boundary=True)
 
     def chi_umv(self, target):
         # Get the displacement vector for the motion
@@ -643,7 +659,7 @@ class CrystalTower_miniSD_Scan:
                 linestyle='--', linewidth=1, label="x", color=self.color_list[0])
         ax.plot(self.y.dp_boundary[:, 2], self.y.dp_boundary[:, 1],
                 linestyle='--', linewidth=1, label="y", color=self.color_list[1])
-        ax.plot(self.th.dp_boundary[:, 2], self.th.dp_boundary[:, 1],
+        ax.plot(self.th1.dp_boundary[:, 2], self.th1.dp_boundary[:, 1],
                 linestyle='--', linewidth=1, label="th", color=self.color_list[2])
         ax.plot(self.chi.dp_boundary[:, 2], self.chi.dp_boundary[:, 1],
                 linestyle='--', linewidth=1, label="chi", color=self.color_list[3])
