@@ -38,6 +38,17 @@ however.
 1. Change the auto-alignment behavior
 2. Change the crystal property grab behavior.
 
+# Some thoughts
+I am currently using a lot of Kohzu motors in the simulation.
+However, I am not sure if I want to implement sub classes of kohzu motor models 
+or not.
+The good thing is that I can shorten the code.
+The bad thing is that I need to create a lot of layers of code.
+
+The most important feature of this repo is that I believe it is more readable 
+than those well-developed repos.
+I will choose the one that can perserve this.
+
 # Notice
 ### Optimization
 In this repo, not all the functions are optimized.

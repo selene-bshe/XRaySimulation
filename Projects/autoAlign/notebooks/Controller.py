@@ -187,3 +187,29 @@ def get_optics(Ec=9.8):
                    "vcc3": vcc_channel_cuts[2],
                    "vcc4": vcc_channel_cuts[3], }
     return optics_dict
+
+
+def assemble_motors_and_optics(Ec=9.8):
+    # Get all the optics
+    optics_all = get_optics(Ec=Ec)
+
+    # Get all the motors
+    t1 = Motors.CrystalTower_x_y_theta_chi()
+    t6 = Motors.CrystalTower_x_y_theta_chi()
+
+    # For the VCC branch
+    t2 = Motors.CrystalTower_x_y_theta_chi()
+    t3 = Motors.CrystalTower_x_y_theta_chi()
+    t45 = Motors.CrystalTower_miniSD_Scan()
+
+    # Get the grating tower
+    g1 = Motors.Grating_tower()
+    g2 = Motors.Grating_tower()
+
+    # Get the Mirror tower
+    m1 = Motors.Mirror_tower1()
+    m2 = Motors.Mirror_tower2()
+
+    # Get the sample tower
+    sample = Motors.TG_Sample_tower()
+
