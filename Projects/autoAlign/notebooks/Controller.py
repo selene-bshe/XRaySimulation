@@ -4,24 +4,41 @@ import sys
 
 sys.path.append("../../../../XRaySimulation")
 
-from XRaySimulation import Pulse, DeviceSimu, util, Crystal
-from XRaySimulation.Machine import Motors
+from XRaySimulation import Crystal
+from XRaySimulation.Machine import Motors, ScintillatorCamera
 
 
 class XppController_TG:
+    """
+    With this object, I define a lot of ways to access each motors.
+    This certainly makes this object prone to error.
+    However, I have little time to find a better solution.
+    If you intend to use this future for your own work,
+    you definitely need to rethink about the logic to make it compatible
+    for your own applications
+
+    """
+
     def __abs__(self):
-        # Step 1 Create all the optics
-        optics_container = get_optics()
+        # Step 1 Create all the optics and motors
+        motors, optics = assemble_motors_and_optics(Ec=9.8)
 
-        # Step 2 Create all motion stack
-        # For the CC branch
-        self.t1 = Motors.CrystalTower_x_y_theta_chi()
-        self.t6 = Motors.CrystalTower_x_y_theta_chi()
+        # Step 2 Create properties associate with each component
+        self._motor_stacks = motors
+        self._optics = optics
 
-        # For the VCC branch
-        self.t2 = Motors.CrystalTower_x_y_theta_chi()
-        self.t3 = Motors.CrystalTower_x_y_theta_chi()
-        self.t45 = Motors.CrystalTower_miniSD_Scan()
+        self.t1 = motors['t1']
+        self.t2 = motors['t1']
+        self.t3 = motors['t1']
+        self.t45 = motors['t1']
+        self.t6 = motors['t1']
+        self.g1 = motors['t1']
+        self.g2 = motors['t1']
+        self.tg_g = motors['t1']
+        self.m1 = motors['t1']
+        self.m2a = motors['t1']
+        self.m2b = motors['t1']
+        self.si = motors['si']
 
         # Step 3 Move the devices to their rough position
 
@@ -170,6 +187,14 @@ def get_optics(Ec=9.8):
                                       chi_dict=si111,
                                       edge_length=2e4, )
 
+    # Create the YAG crystals
+    #  Later, I'll install the YAG camera. However, at this moment, I would like to use a
+    # simple implementation of the yag crystal as a place-holder to make the simulation work.
+    yag_sample = Crystal.YAG()
+    yag1 = Crystal.YAG()
+    yag2 = Crystal.YAG()
+    yag3 = Crystal.YAG()
+
     optics_dict = {"g1 cc": g1_cc,
                    "g1 vcc": g1_vcc,
                    "g2 cc": g2_cc,
@@ -185,7 +210,12 @@ def get_optics(Ec=9.8):
                    "vcc1": vcc_channel_cuts[0],
                    "vcc2": vcc_channel_cuts[1],
                    "vcc3": vcc_channel_cuts[2],
-                   "vcc4": vcc_channel_cuts[3], }
+                   "vcc4": vcc_channel_cuts[3],
+                   "yag sample": yag_sample,
+                   "yag1": yag1,
+                   "yag2": yag2,
+                   "yag3": yag3,
+                   }
     return optics_dict
 
 
@@ -194,22 +224,68 @@ def assemble_motors_and_optics(Ec=9.8):
     optics_all = get_optics(Ec=Ec)
 
     # Get all the motors
-    t1 = Motors.CrystalTower_x_y_theta_chi()
-    t6 = Motors.CrystalTower_x_y_theta_chi()
+    t1 = Motors.CrystalTower_x_y_theta_chi(channelCut=optics_all['cc1'],
+                                           crystal_loc=np.copy(optics_all['cc1'].crystal_list[0].surface_point, ))
+    t6 = Motors.CrystalTower_x_y_theta_chi(channelCut=optics_all['cc2'],
+                                           crystal_loc=np.copy(optics_all['cc2'].crystal_list[0].surface_point, ))
 
     # For the VCC branch
-    t2 = Motors.CrystalTower_x_y_theta_chi()
-    t3 = Motors.CrystalTower_x_y_theta_chi()
-    t45 = Motors.CrystalTower_miniSD_Scan()
+    t2 = Motors.CrystalTower_x_y_theta_chi(channelCut=optics_all['vcc1'],
+                                           crystal_loc=np.copy(optics_all['vcc1'].crystal_list[0].surface_point, ))
+    t3 = Motors.CrystalTower_x_y_theta_chi(channelCut=optics_all['vcc2'],
+                                           crystal_loc=np.copy(optics_all['vcc2'].crystal_list[0].surface_point, ))
+    t45 = Motors.CrystalTower_miniSD_Scan(channelCut1=optics_all['vcc3'],
+                                          crystal_loc1=np.copy(optics_all['vcc3'].crystal_list[0].surface_point, ),
+                                          channelCut2=optics_all['vcc4'],
+                                          crystal_loc2=np.copy(optics_all['vcc4'].crystal_list[0].surface_point, ),
+                                          )
 
     # Get the grating tower
-    g1 = Motors.Grating_tower()
-    g2 = Motors.Grating_tower()
+    g1 = Motors.Grating_tower(grating_1=optics_all['g1 cc'],
+                              grating_m1=optics_all['g1 vcc'],
+                              )
+    g2 = Motors.Grating_tower(grating_1=optics_all['g2 cc'],
+                              grating_m1=optics_all['g2 vcc'], )
+
+    tg_g = Motors.Grating_tower(grating_1=optics_all['tg g a'],
+                                grating_m1=optics_all['tg g b'], )
 
     # Get the Mirror tower
-    m1 = Motors.Mirror_tower1()
-    m2 = Motors.Mirror_tower2()
+    m1 = Motors.Mirror_tower1(mirror=optics_all['tg mirror probe'],
+                              crystal_loc=np.copy(optics_all['tg mirror probe'].surface_point),
+                              )
+    m2a = Motors.Mirror_tower2(mirror=optics_all['tg mirror pump a'],
+                               crystal_loc=np.copy(optics_all['tg mirror pump a'].surface_point), )
+    m2b = Motors.Mirror_tower2(mirror=optics_all['tg mirror pump b'],
+                               crystal_loc=np.copy(optics_all['tg mirror pump b'].surface_point), )
+
+    # Get the silicon tower
+    si = Motors.Silicon_tower(crystal=optics_all['tg si111'],
+                              crystal_loc=np.copy(optics_all['tg si111'].surface_point),
+                              )
 
     # Get the sample tower
-    sample = Motors.TG_Sample_tower()
+    sample = Motors.TG_Sample_tower(sample=optics_all['yag sample'],
+                                    yag_sample=optics_all['yag sample'],
+                                    yag1=optics_all['yag1'],
+                                    yag2=optics_all['yag2'],
+                                    yag3=optics_all['yag3']
+                                    )
 
+    motor_stacks = {'t1': t1,
+                    't2': t2,
+                    't3': t3,
+                    't45': t45,
+                    't6': t6,
+                    'g1': g1,
+                    'g2': g2,
+                    'tg g': tg_g,
+                    'm1': m1,
+                    'm2a': m2a,
+                    'm2b': m2b,
+                    "si": si,
+                    'sample': sample}
+
+    # TODO: Need to specify the installation location with respect to the optical breadboard.
+
+    return motor_stacks, optics_all

@@ -635,6 +635,72 @@ class RectangleGrating:
         return factor
 
 
+class YAG:
+    def __init__(self,
+                 surface_point=np.zeros(3),
+                 normal=np.array([0., 0., 1.], dtype=np.float64),
+                 dimension=None,
+                 ):
+        """
+
+        :param a: The width of the groove
+        :param b: The width of the tooth
+        :param n: The refraction index
+        :param height: The height of the tooth
+        :param base_thickness: The thickness of the base plate
+        :param direction: The direction of the wave vector transfer.
+        :param surface_point: One point through which the surface goes through.
+        :param normal: The normal direction of the surface
+        """
+        self.type = "YAG"
+
+        if dimension is None:
+            dimension = [1000, 1000]
+
+        # Geometry info
+        self.surface_point = surface_point
+        self.normal = normal
+
+        self.boundary = np.array([np.array([-dimension[0] / 2, -dimension[1] / 2, 0, ]),
+                                  np.array([-dimension[0] / 2, dimension[1] / 2, 0, ]),
+                                  np.array([dimension[0] / 2, dimension[1] / 2, 0, ]),
+                                  np.array([dimension[0] / 2, -dimension[1] / 2, 0, ]),
+                                  np.array([-dimension[0] / 2, -dimension[1] / 2, 0, ]),
+                                  ])
+
+    def shift(self, displacement, include_boundary=True):
+        self.surface_point += displacement
+
+        if include_boundary:
+            self.boundary += displacement[np.newaxis, :]
+
+    def rotate(self, rot_mat, include_boundary=True):
+        # The shift of the space does not change the reciprocal lattice and the normal direction
+        self.normal = np.ascontiguousarray(rot_mat.dot(self.normal))
+        self.surface_point = np.asanyarray(np.dot(rot_mat, self.surface_point))
+
+        if include_boundary:
+            self.boundary = np.asanyarray(np.dot(self.boundary, rot_mat.T))
+
+    def rotate_wrt_point(self, rot_mat, ref_point, include_boundary=True):
+        """
+        This is a function designed
+        :param rot_mat:
+        :param ref_point:
+        :param include_boundary:
+        :return:
+        """
+        tmp = np.copy(ref_point)
+        # Step 1: shift with respect to that point
+        self.shift(displacement=-np.copy(tmp), include_boundary=include_boundary)
+
+        # Step 2: rotate the quantities
+        self.rotate(rot_mat=rot_mat, include_boundary=include_boundary)
+
+        # Step 3: shift it back to the reference point
+        self.shift(displacement=np.copy(tmp), include_boundary=include_boundary)
+
+
 class TotalReflectionMirror:
     def __init__(self,
                  surface_point=np.zeros(3),

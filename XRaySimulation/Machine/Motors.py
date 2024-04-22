@@ -17,6 +17,16 @@ coordinate used by XPP is the following:
  2                          z axis                       x-ray proportion direction
 """
 
+"""
+When I am implementing this module, 
+I am very short in time.
+Therefore, I have assumed that the sole purpose of this module is for the TG experiment.
+Even though I have tried a bit to make it more general purpose, 
+it is pretty much a failure.
+If you plan to use this module for your own work, you need to think twice.
+With high probability, you need to spend a significant amount of time to revise the code. 
+"""
+
 import numpy as np
 from XRaySimulation import util
 
@@ -29,10 +39,11 @@ class LinearMotor:
                  backlash=100.0,
                  feedback_noise_level=1.0,
                  speed_um_per_ps=1 * 1000 / 1e12,
-                 dimension=[100e3, 100e3],  # The linear dimension of the motor for the visualization
+                 dimension=None,  # The linear dimension of the motor for the visualization
                  color='black',
                  ):
         """
+        By default, the motion axis is along the x axis.
 
         :param upperLim:
         :param lowerLim:
@@ -47,6 +58,8 @@ class LinearMotor:
         # Define quantities in the control system
         # ---------------------------------------------------
         # With respect to the default positive direction, whether change the motor motion direction
+        if dimension is None:
+            dimension = [100e3, 100e3]
         self.control_motor_type = "Linear"
 
         self.control_location = 0.0
@@ -188,7 +201,7 @@ class RotationMotor:
                  backlash=0.05,
                  feedback_noise_level=1.0,
                  speed_rad_per_ps=1 * 1000 / 1e12,
-                 dimension=[100e3, 100e3]
+                 dimension=None
                  ):
         """
 
@@ -204,6 +217,8 @@ class RotationMotor:
         # ---------------------------------------------------
         # Define quantities in the control system
         # ---------------------------------------------------
+        if dimension is None:
+            dimension = [100e3, 100e3]
         self.control_motor_type = "Rotation"
 
         self.control_limits = np.zeros(2)
@@ -334,7 +349,7 @@ class RotationMotor:
             return False
 
 
-def get_motors_with_model(model, color='k'):
+def get_motors_with_model_for_axis(model, color='k', axis='x'):
     if model == "XA10A":
         motor_obj = LinearMotor(upperLim=12.5 * 1000,
                                 lowerLim=-12.5 * 1000,
@@ -728,16 +743,13 @@ class CrystalTower_miniSD_Scan:
 
 class Grating_tower:
     """
-    This is just a simple realization of the most commonly used crystal tower in the miniSD device.
-    Even though initially, I was thinking that I should implement some function that
-    are more general than this.
-    In the end, I realized that it is beyond my current capability.
-    Therefore, I guess it is easier for me to just get something more concrete and to give this
-    to Khaled sooner.
+    This is a temporary implementation for the TG project.
+    For more general purpose usage, one needs to use something different.
     """
 
     def __init__(self,
-                 grating):
+                 grating_1,
+                 grating_m1):
         # Create the instance of each motors
 
         self.x = LinearMotor(upperLim=12.5 * 1000,
@@ -775,7 +787,8 @@ class Grating_tower:
                                  feedback_noise_level=1e-9,
                                  speed_rad_per_ps=0.1 / 1e12, )
 
-        self.optics = grating
+        self.grating_1 = grating_1
+        self.grating_m1 = grating_m1
 
         # ------------------------------------------
         # Change the motor configuration
@@ -833,7 +846,8 @@ class Grating_tower:
         # Move the crystal such that the
         crystalSurface = np.zeros(3, dtype=np.float64)
         crystalSurface[0] = 30 * 1000 + 20 * 1000 + 30e3 + 20e3
-        self.optics.shift(displacement=crystalSurface)
+        self.grating_1.shift(displacement=crystalSurface)
+        self.grating_m1.shift(displacement=crystalSurface)
 
         # Define the color for the device visualization
         self.color_list = ['red', 'brown', 'yellow', 'purple', 'black']
@@ -857,7 +871,8 @@ class Grating_tower:
         self.pi.shift(displacement=displacement, include_boundary=True)
         self.roll.shift(displacement=displacement, include_boundary=True)
         self.yaw.shift(displacement=displacement, include_boundary=True)
-        self.optics.shift(displacement=displacement, include_boundary=True)
+        self.grating_1.shift(displacement=displacement, include_boundary=True)
+        self.grating_m1.shift(displacement=displacement, include_boundary=True)
 
     def y_umv(self, target):
         # Get the displacement vector for the motion
@@ -868,7 +883,8 @@ class Grating_tower:
         self.pi.shift(displacement=displacement, include_boundary=True)
         self.roll.shift(displacement=displacement, include_boundary=True)
         self.yaw.shift(displacement=displacement, include_boundary=True)
-        self.optics.shift(displacement=displacement, include_boundary=True)
+        self.grating_1.shift(displacement=displacement, include_boundary=True)
+        self.grating_m1.shift(displacement=displacement, include_boundary=True)
 
     def pi_umv(self, target):
         # Get the displacement vector for the motion
@@ -881,7 +897,10 @@ class Grating_tower:
         motion_time = self.pi.user_move_abs(target=target, getMotionTime=True)
         self.roll.rotate_wrt_point(rot_mat=rotMat, ref_point=self.pi.physical_rotation_center, include_boundary=True)
         self.yaw.rotate_wrt_point(rot_mat=rotMat, ref_point=self.pi.physical_rotation_center, include_boundary=True)
-        self.optics.rotate_wrt_point(rot_mat=rotMat, ref_point=self.pi.physical_rotation_center, include_boundary=True)
+        self.grating_1.rotate_wrt_point(rot_mat=rotMat, ref_point=self.pi.physical_rotation_center,
+                                        include_boundary=True)
+        self.grating_m1.rotate_wrt_point(rot_mat=rotMat, ref_point=self.pi.physical_rotation_center,
+                                         include_boundary=True)
 
     def roll_umv(self, target):
         # Get the displacement vector for the motion
@@ -893,8 +912,10 @@ class Grating_tower:
         # Shift all the motors and crystals with it
         motion_time = self.roll.user_move_abs(target=target, getMotionTime=True)
         self.yaw.rotate_wrt_point(rot_mat=rotMat, ref_point=self.pi.physical_rotation_center, include_boundary=True)
-        self.optics.rotate_wrt_point(rot_mat=rotMat, ref_point=self.roll.physical_rotation_center,
-                                     include_boundary=True)
+        self.grating_1.rotate_wrt_point(rot_mat=rotMat, ref_point=self.roll.physical_rotation_center,
+                                        include_boundary=True)
+        self.grating_m1.rotate_wrt_point(rot_mat=rotMat, ref_point=self.roll.physical_rotation_center,
+                                         include_boundary=True)
 
     def yaw_umv(self, target):
         # Get the displacement vector for the motion
@@ -905,7 +926,10 @@ class Grating_tower:
 
         # Shift all the motors and crystals with it
         motion_time = self.yaw.user_move_abs(target=target, getMotionTime=True)
-        self.optics.rotate_wrt_point(rot_mat=rotMat, ref_point=self.yaw.physical_rotation_center, include_boundary=True)
+        self.grating_1.rotate_wrt_point(rot_mat=rotMat, ref_point=self.yaw.physical_rotation_center,
+                                        include_boundary=True)
+        self.grating_m1.rotate_wrt_point(rot_mat=rotMat, ref_point=self.yaw.physical_rotation_center,
+                                         include_boundary=True)
 
 
 class Mirror_tower1:
@@ -1151,7 +1175,7 @@ class Silicon_tower:
     """
 
     def __init__(self,
-                 channelCut,
+                 crystal,
                  crystal_loc):
         # Create the instance of each motors
 
@@ -1190,7 +1214,10 @@ class Silicon_tower:
                                 feedback_noise_level=1e-9,
                                 speed_rad_per_ps=0.1 / 1e12, )
 
-        self.optics = channelCut
+        self.optics = crystal
+
+        self.all_mostors = [self.x, self.y, self.z, self.roll, self.pi]
+        self.all_mostors_and_optics = [self.x, self.y, self.z, self.roll, self.pi, self.optics]
 
         # ------------------------------------------
         # Change the motor configuration
