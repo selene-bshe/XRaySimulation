@@ -1,11 +1,17 @@
+import os
+
 import numpy as np
 
 import sys
 
 sys.path.append("../../../../XRaySimulation")
 
-from XRaySimulation import Crystal
+from XRaySimulation import Crystal, DeviceSimu
 from XRaySimulation.Machine import Motors, ScintillatorCamera
+
+# The following modules are loaded as a temporary solution
+import rayTracingCalculation
+import eFieldProcessing
 
 
 class XppController_TG:
@@ -28,17 +34,53 @@ class XppController_TG:
         self._optics = optics
 
         self.t1 = motors['t1']
-        self.t2 = motors['t1']
-        self.t3 = motors['t1']
-        self.t45 = motors['t1']
-        self.t6 = motors['t1']
-        self.g1 = motors['t1']
-        self.g2 = motors['t1']
-        self.tg_g = motors['t1']
-        self.m1 = motors['t1']
-        self.m2a = motors['t1']
-        self.m2b = motors['t1']
+        self.t2 = motors['t2']
+        self.t3 = motors['t3']
+        self.t45 = motors['t45']
+        self.t6 = motors['t6']
+        self.g1 = motors['g1']
+        self.g2 = motors['g2']
+        self.tg_g = motors['tg g']
+        self.m1 = motors['m1']
+        self.m2a = motors['m2a']
+        self.m2b = motors['m2b']
         self.si = motors['si']
+
+        # For a quick and temporary solution.
+        # I'll start with the aligned optics
+        expSimu = rayTracingCalculation.get_miniSD_and_TG_trajectory()
+        (t2x_coef,
+         t3x_coef,
+         t4x_coef,
+         t5x_coef,
+         probe1z_coef,
+         probe1alpha_coef,
+         probe2z_coef,
+         pump1z_coef,
+         pump1alpha_coef,
+         pump2z_coef,
+         pump2alpha_coef) = rayTracingCalculation.get_trajectory_dependence_on_various_parameters()
+
+        # self.cc1 = optics['cc1']
+        # self.cc2 = optics['cc2']
+        # self.vcc1 = optics['vcc1']
+        # self.vcc2 = optics['vcc2']
+        # self.vcc3 = optics['vcc3']
+        # self.vcc4 = optics['vcc4']
+
+        self.cc1 = expSimu['devices']['cc'][0]
+        self.cc2 = expSimu['devices']['cc'][1]
+        self.vcc1 = expSimu['devices']['vcc'][0]
+        self.vcc2 = expSimu['devices']['vcc'][1]
+        self.vcc3 = expSimu['devices']['vcc'][2]
+        self.vcc4 = expSimu['devices']['vcc'][3]
+
+        # This a temporary entry which contains the aligned optics from the old method
+        self.expSimu = expSimu
+
+        # Add the shutter
+        self.cc_shutter = True
+        self.vcc_shutter = True
 
         # Step 3 Move the devices to their rough position
 
@@ -47,6 +89,11 @@ class XppController_TG:
         # Step 5 Add diodes
 
         # Step 6 Add cameras
+        self.pixel_num_x = 2048
+        self.pixel_num_y = 2048
+
+        self.pixel_pos_x = np.linspace(- 1024 * 6.5 / 10, 1024 * 6.5 / 10, 2048) + expSimu['cc']['trajectory'][-1, 1]
+        self.pixel_pos_y = np.linspace(- 1024 * 6.5 / 10, 1024 * 6.5 / 10, 2048) + expSimu['cc']['trajectory'][-1, 0]
 
     def plot_motors(self):
         pass
@@ -57,9 +104,380 @@ class XppController_TG:
     def get_camera(self):
         pass
 
+    def show_cc(self):
+        self.cc_shutter = True
+        self.vcc_shutter = False
 
-def parser(commandline):
-    pass
+    def show_vcc(self):
+        self.vcc_shutter = True
+        self.cc_shutter = False
+
+    def show_both(self):
+        self.vcc_shutter = True
+        self.cc_shutter = True
+
+    def show_neither(self):
+        self.vcc_shutter = False
+        self.cc_shutter = False
+
+    def get_measurement(self, sase_field, kGrid, coor_dict):
+        """
+        This is a temporary solution.
+        I'll just calculate all the quantity that I need.
+        Later, this will be replaced with something more reasonable.
+
+        :return:
+        """
+        simulation_statistics = {}
+        measurements = {}
+
+        # Get the incident pulse energy  # always use the summation of the electric field as the energy
+        measurements.update({'ipm2': np.sum(np.square(np.abs(sase_field)))})
+        eFieldProcessing.get_statistics(summary_dict=simulation_statistics,
+                                        array=np.square(np.abs(sase_field)),
+                                        tag="sase intensity")
+
+        sase_spec = np.fft.fftshift(np.fft.fftn(np.fft.fftshift(sase_field)))
+
+        # Collect the statistics of these fields
+        eFieldProcessing.get_statistics(summary_dict=simulation_statistics,
+                                        array=np.square(np.abs(sase_spec)),
+                                        tag="sase spectrum")
+
+        # ---------------------------------------------------------------------------
+        # Get the electric field after CC1
+        # Step 1 get the light path after the first CC crystal
+        observation_point = np.array([0, 0, 6e4])
+
+        # Get the trajectory through the targeted optics
+        device_list = [self.expSimu['devices']["sd grating cc"][0], ]
+        for idx in range(1):
+            device_list += self.expSimu['devices']["cc"][idx].crystal_list
+
+        # Get the electric field after the first CC
+        outputDict, coor_dict = eFieldProcessing.get_efield_with_interpolation(observation_point=observation_point,
+                                                                               device_list=device_list,
+                                                                               gaussian_pulse=self.expSimu['devices'][
+                                                                                   'pulse'],
+                                                                               spec_in=sase_spec,
+                                                                               kin_grid=kGrid,
+                                                                               coordinate_dict=coor_dict,
+                                                                               flag_interpolation=False,
+                                                                               mode="xyz 3D")
+        measurements.update({'d1': np.sum(np.square(np.abs(outputDict['field_grid'])))})
+        eFieldProcessing.get_statistics(summary_dict=simulation_statistics,
+                                        array=np.square(np.abs(outputDict['field_grid'])),
+                                        tag="cc1 intensity")
+        eFieldProcessing.get_statistics(summary_dict=simulation_statistics,
+                                        array=np.square(np.abs(outputDict['spectrum_grid'])),
+                                        tag="cc1 spectrum")
+
+        # ---------------------------------------------------------------------------
+        # Get the electric field after CC2
+        # Step 1 get the light path after the first CC crystal
+        observation_point = np.array([0, 0, 1.1e6])
+
+        # Get the trajectory through the targeted optics
+        device_list = [self.expSimu['devices']["sd grating cc"][0], ]
+        for idx in range(2):
+            device_list += self.expSimu['devices']["cc"].crystal_list
+
+        # Get the electric field after the first CC
+        outputDict, coor_dict = eFieldProcessing.get_efield_with_interpolation(observation_point=observation_point,
+                                                                               device_list=device_list,
+                                                                               gaussian_pulse=self.expSimu['devices'][
+                                                                                   'pulse'],
+                                                                               spec_in=sase_spec,
+                                                                               kin_grid=kGrid,
+                                                                               coordinate_dict=coor_dict,
+                                                                               flag_interpolation=False,
+                                                                               mode="xyz 3D")
+
+        # Get the d6 output assuming that there is no shutter and no influence from the VCC branch.
+        measurements.update({'d6 raw': np.sum(np.square(np.abs(outputDict['field_grid'])))})
+        eFieldProcessing.get_statistics(summary_dict=simulation_statistics,
+                                        array=np.square(np.abs(outputDict['field_grid'])),
+                                        tag="cc2 intensity")
+        eFieldProcessing.get_statistics(summary_dict=simulation_statistics,
+                                        array=np.square(np.abs(outputDict['spectrum_grid'])),
+                                        tag="cc2 spectrum")
+
+        # ---------------------------------------------------------------------------
+        # Get the CC pulse on the sample without focusing
+        observation_point = np.array([0, 0, 10e6])
+
+        # Get the trajectory through the targeted optics
+        device_list = [self.expSimu['devices']["sd grating cc"][0], ]
+        for idx in range(2):
+            device_list += self.expSimu['devices']["cc"][idx].crystal_list
+        device_list += [self.expSimu['devices']["sd grating cc"][1], ]
+
+        # Get the electric field after the first CC
+        outputDict, coor_dict = eFieldProcessing.get_efield_with_interpolation(observation_point=observation_point,
+                                                                               device_list=device_list,
+                                                                               gaussian_pulse=self.expSimu['devices'][
+                                                                                   'pulse'],
+                                                                               spec_in=sase_spec,
+                                                                               kin_grid=kGrid,
+                                                                               coordinate_dict=coor_dict,
+                                                                               flag_interpolation=False,
+                                                                               mode="xyz 3D")
+
+        measurements.update({'cc sample raw': np.sum(np.square(np.abs(outputDict['field_grid'])))})
+        eFieldProcessing.get_statistics(summary_dict=simulation_statistics,
+                                        array=np.square(np.abs(outputDict['field_grid'])),
+                                        tag="cc sample intensity")
+        eFieldProcessing.get_statistics(summary_dict=simulation_statistics,
+                                        array=np.square(np.abs(outputDict['spectrum_grid'])),
+                                        tag="cc sample spectrum")
+
+        (cc_trajectory_local,
+         cc_kout_list_local,
+         cc_path_local) = DeviceSimu.get_lightpath(device_list=device_list,
+                                                   kin=self.expSimu['devices'][
+                                                       'pulse'].k0,
+                                                   initial_point=self.expSimu['devices'][
+                                                       'pulse'].x0,
+                                                   final_plane_point=np.array([0, 0, 10e6]),
+                                                   final_plane_normal=np.array([0, 0, 1]))
+
+        # ------------------------------------------------------------------------------
+        #   VCC 1
+        # ------------------------------------------------------------------------------
+        # Step 1 get the light path after the first CC crystal
+        observation_point = np.array([0, 0, 3e5])
+
+        # Get the trajectory through the targeted optics
+        device_list = [self.expSimu['devices']["sd grating vcc"][0], ]
+        for idx in range(1):
+            device_list += self.expSimu['devices']["vcc"][idx].crystal_list
+
+        # Get the electric field after the first CC
+        (outputDict,
+         coor_dict) = eFieldProcessing.get_efield_with_interpolation(observation_point=observation_point,
+                                                                     device_list=device_list,
+                                                                     gaussian_pulse=self.expSimu['devices']['pulse'],
+                                                                     spec_in=sase_spec,
+                                                                     kin_grid=kGrid,
+                                                                     coordinate_dict=coor_dict,
+                                                                     coordinate_info_new={"nx": 4,
+                                                                                          'ny': 128,
+                                                                                          'nz': 1024,
+                                                                                          'dx': 4,
+                                                                                          'dy': 1,
+                                                                                          'dz': coor_dict['zCoor'][1] -
+                                                                                                coor_dict['zCoor'][
+                                                                                                    0], },
+                                                                     flag_interpolation=True,
+                                                                     mode="xyz 3D")
+
+        measurements.update({'d2': np.sum(np.square(np.abs(outputDict['field_grid'])))})
+        eFieldProcessing.get_statistics(summary_dict=simulation_statistics,
+                                        array=np.square(np.abs(outputDict['field_grid'])),
+                                        tag="vcc1 intensity")
+        eFieldProcessing.get_statistics(summary_dict=simulation_statistics,
+                                        array=np.square(np.abs(outputDict['spectrum_grid'])),
+                                        tag="vcc1 spectrum")
+        # ------------------------------------------------------------------------------
+        #   VCC 2
+        # ------------------------------------------------------------------------------
+        # Step 1 get the light path after the first CC crystal
+        observation_point = np.array([0, 0, 5e5])
+
+        # Get the trajectory through the targeted optics
+        device_list = [self.expSimu['devices']["sd grating vcc"][0], ]
+        for idx in range(2):
+            device_list += self.expSimu['devices']["vcc"][idx].crystal_list
+
+        # Get the electric field after the first CC
+        (outputDict,
+         coor_dict) = eFieldProcessing.get_efield_with_interpolation(observation_point=observation_point,
+                                                                     device_list=device_list,
+                                                                     gaussian_pulse=self.expSimu['devices']['pulse'],
+                                                                     spec_in=sase_spec,
+                                                                     kin_grid=kGrid,
+                                                                     coordinate_dict=coor_dict,
+                                                                     coordinate_info_new={"nx": 4,
+                                                                                          'ny': 128,
+                                                                                          'nz': 1024,
+                                                                                          'dx': 4,
+                                                                                          'dy': 1,
+                                                                                          'dz': coor_dict['zCoor'][1] -
+                                                                                                coor_dict['zCoor'][
+                                                                                                    0], },
+                                                                     flag_interpolation=True,
+                                                                     mode="xyz 3D")
+
+        measurements.update({'d3': np.sum(np.square(np.abs(outputDict['field_grid'])))})
+        eFieldProcessing.get_statistics(summary_dict=simulation_statistics,
+                                        array=np.square(np.abs(outputDict['field_grid'])),
+                                        tag="vcc2 intensity")
+        eFieldProcessing.get_statistics(summary_dict=simulation_statistics,
+                                        array=np.square(np.abs(outputDict['spectrum_grid'])),
+                                        tag="vcc2 spectrum")
+        # ------------------------------------------------------------------------------
+        #   VCC 3
+        # ------------------------------------------------------------------------------
+        # Step 1 get the light path after the first CC crystal
+        observation_point = np.array([0, 0, 7e5])
+
+        # Get the trajectory through the targeted optics
+        device_list = [self.expSimu['devices']["sd grating vcc"][0], ]
+        for idx in range(3):
+            device_list += self.expSimu['devices']["vcc"][idx].crystal_list
+
+        # Get the electric field after the first CC
+        (outputDict,
+         coor_dict) = eFieldProcessing.get_efield_with_interpolation(observation_point=observation_point,
+                                                                     device_list=device_list,
+                                                                     gaussian_pulse=self.expSimu['devices']['pulse'],
+                                                                     spec_in=sase_spec,
+                                                                     kin_grid=kGrid,
+                                                                     coordinate_dict=coor_dict,
+                                                                     coordinate_info_new={"nx": 4,
+                                                                                          'ny': 128,
+                                                                                          'nz': 1024,
+                                                                                          'dx': 4,
+                                                                                          'dy': 1,
+                                                                                          'dz': coor_dict['zCoor'][1] -
+                                                                                                coor_dict['zCoor'][
+                                                                                                    0], },
+                                                                     flag_interpolation=True,
+                                                                     mode="xyz 3D")
+
+        measurements.update({'d4 raw': np.sum(np.square(np.abs(outputDict['field_grid'])))})
+
+        eFieldProcessing.get_statistics(summary_dict=simulation_statistics,
+                                        array=np.square(np.abs(outputDict['field_grid'])),
+                                        tag="vcc3 intensity")
+        eFieldProcessing.get_statistics(summary_dict=simulation_statistics,
+                                        array=np.square(np.abs(outputDict['spectrum_grid'])),
+                                        tag="vcc3 spectrum")
+
+        # ------------------------------------------------------------------------------
+        #   VCC 4
+        # ------------------------------------------------------------------------------
+        # Step 1 get the light path after the first CC crystal
+        observation_point = np.array([0, 0, 9e5])
+
+        # Get the trajectory through the targeted optics
+        device_list = [self.expSimu['devices']["sd grating vcc"][0], ]
+        for idx in range(4):
+            device_list += self.expSimu['devices']["vcc"][idx].crystal_list
+
+        # Get the electric field after the first CC
+        (outputDict,
+         coor_dict) = eFieldProcessing.get_efield_with_interpolation(observation_point=observation_point,
+                                                                     device_list=device_list,
+                                                                     gaussian_pulse=self.expSimu['devices']['pulse'],
+                                                                     spec_in=sase_spec,
+                                                                     kin_grid=kGrid,
+                                                                     coordinate_dict=coor_dict,
+                                                                     coordinate_info_new={"nx": 4,
+                                                                                          'ny': 128,
+                                                                                          'nz': 1024,
+                                                                                          'dx': 4,
+                                                                                          'dy': 1,
+                                                                                          'dz': coor_dict['zCoor'][1] -
+                                                                                                coor_dict['zCoor'][
+                                                                                                    0], },
+                                                                     flag_interpolation=True,
+                                                                     mode="xyz 3D")
+
+        measurements.update({'d5 raw': np.sum(np.square(np.abs(outputDict['field_grid'])))})
+        eFieldProcessing.get_statistics(summary_dict=simulation_statistics,
+                                        array=np.square(np.abs(outputDict['field_grid'])),
+                                        tag="vcc4 intensity")
+        eFieldProcessing.get_statistics(summary_dict=simulation_statistics,
+                                        array=np.square(np.abs(outputDict['spectrum_grid'])),
+                                        tag="vcc4 spectrum")
+
+        # ------------------------------------------------------------------------------
+        #   VCC sample
+        # ------------------------------------------------------------------------------
+        # Step 1 get the light path after the first CC crystal
+        observation_point = np.array([0, 0, 10e6])
+
+        # Get the trajectory through the targeted optics
+        device_list = [self.expSimu['devices']["sd grating vcc"][0], ]
+        for idx in range(4):
+            device_list += self.expSimu['devices']["vcc"][idx].crystal_list
+        device_list += [self.expSimu['devices']["sd grating vcc"][1], ]
+
+        # Get the electric field after the first CC
+        (outputDict,
+         coor_dict) = eFieldProcessing.get_efield_with_interpolation(observation_point=observation_point,
+                                                                     device_list=device_list,
+                                                                     gaussian_pulse=self.expSimu['devices']['pulse'],
+                                                                     spec_in=sase_spec,
+                                                                     kin_grid=kGrid,
+                                                                     coordinate_dict=coor_dict,
+                                                                     coordinate_info_new={"nx": 4,
+                                                                                          'ny': 128,
+                                                                                          'nz': 1024,
+                                                                                          'dx': 4,
+                                                                                          'dy': 1,
+                                                                                          'dz': coor_dict['zCoor'][1] -
+                                                                                                coor_dict['zCoor'][
+                                                                                                    0], },
+                                                                     flag_interpolation=True,
+                                                                     mode="xyz 3D")
+
+        measurements.update({'vcc sample raw': np.sum(np.square(np.abs(outputDict['field_grid'])))})
+        eFieldProcessing.get_statistics(summary_dict=simulation_statistics,
+                                        array=np.square(np.abs(outputDict['field_grid'])),
+                                        tag="vcc sample intensity")
+        eFieldProcessing.get_statistics(summary_dict=simulation_statistics,
+                                        array=np.square(np.abs(outputDict['spectrum_grid'])),
+                                        tag="vcc sample spectrum")
+
+        # Get the current interaction point with the YAG screen with the
+        (vcc_trajectory_local,
+         vcc_kout_list_local,
+         vcc_path_local) = DeviceSimu.get_lightpath(device_list=device_list,
+                                                    kin=self.expSimu['devices'][
+                                                        'pulse'].k0,
+                                                    initial_point=self.expSimu['devices'][
+                                                        'pulse'].x0,
+                                                    final_plane_point=np.array([0, 0, 10e6]),
+                                                    final_plane_normal=np.array([0, 0, 1]))
+
+        # -----------------------------------------------------------
+        #    Calculate the influence of the shutter on the diode output
+        # -----------------------------------------------------------
+        if self.cc_shutter:
+            measurements.update({'d6': 0 + measurements['d6 raw']})
+            measurements.update({'dsample': 0 + measurements['cc sample raw']})
+        else:
+            measurements.update({'d6': 0})
+            measurements.update({'dsample': 0})
+
+        if self.vcc_shutter:
+            measurements.update({'d4': measurements['d4 raw']})
+            measurements.update({'d5': measurements['d5 raw']})
+            measurements['d6'] += measurements['d5 raw']
+            measurements['dsample'] += measurements['vcc sample raw']
+        else:
+            measurements.update({'d4': 0})
+            measurements.update({'d5': 0})
+
+        # -----------------------------------------------------------
+        #    Calculate the spatial profile of the beam on the screen based on the ray-tracing calculation
+        # -----------------------------------------------------------
+        yag_image = np.zeros((self.pixel_num_x, self.pixel_num_y))
+        if self.cc_shutter:
+            yag_image += DeviceSimu.get_intensity_on_YAG(intensity=simulation_statistics['cc sample intensity']['xy'],
+                                                         intensity_coor=coor_dict,
+                                                         intensity_loc=cc_trajectory_local[-1][:2],
+                                                         pixel_coor=(self.pixel_pos_x, self.pixel_pos_y))
+        if self.vcc_shutter:
+            yag_image += DeviceSimu.get_intensity_on_YAG(intensity=simulation_statistics['vcc sample intensity']['xy'],
+                                                         intensity_coor=coor_dict,
+                                                         intensity_loc=vcc_trajectory_local[-1][:2],
+                                                         pixel_coor=(self.pixel_pos_x, self.pixel_pos_y))
+        measurements.update({"zyla": yag_image})
+
+        return measurements, simulation_statistics
 
 
 # Create the optics I do not want to add to many dependence with these temporary files

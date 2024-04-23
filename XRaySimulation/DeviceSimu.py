@@ -870,9 +870,9 @@ def align_crystal_dynamical_bragg_reflection_xz(crystal,
     rot_mat = util.rot_mat_in_xz_plane(theta=angle_adjust)
     crystal.rotate_wrt_point(rot_mat=rot_mat,
                              ref_point=rot_center)
-    #print(rot_mat)
-    #print(angle_adjust)
-    #print(fwhm)
+    # print(rot_mat)
+    # print(angle_adjust)
+    # print(fwhm)
 
     if get_curve:
         return angles, np.square(np.abs(reflect_s))
@@ -1484,3 +1484,21 @@ def get_interpolated_eField(kvec_array, coor_dict, efield_array, k0, mode, coor_
     else:
         print("No interpolation is applied. Currently this function cannot handle a general interpolation request.")
         print("Please check the source code for this function to understand the current capability boundary.")
+
+
+def get_intensity_on_YAG(intensity, intensity_coor, intensity_loc, pixel_coor):
+    nx, ny = (pixel_coor['xCoor'].shape[0], pixel_coor['yCoor'].shape[0])
+    new_position_grid = np.zeros((nx, ny, 2))
+    new_position_grid[:, :, 0] = pixel_coor['xCoor'][:, np.newaxis]
+    new_position_grid[:, :, 1] = pixel_coor['yCoor'][np.newaxis, :]
+    new_position_grid_for_interpolation = np.reshape(new_position_grid, (nx * ny, 2))
+    del new_position_grid
+
+    yag_image = interpolate.interpn(points=(intensity_coor['xCoor'] + intensity_loc[0],
+                                            intensity_coor['yCoor'] + intensity_loc[1],),
+                                    values=intensity,
+                                    xi=new_position_grid_for_interpolation,
+                                    method='nearest',
+                                    bounds_error=False,
+                                    fill_value=0.)
+    return yag_image
