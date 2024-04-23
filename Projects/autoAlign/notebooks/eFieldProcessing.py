@@ -65,7 +65,7 @@ def get_efield_with_interpolation(observation_point,
     outputField = np.fft.fftshift(np.fft.ifftn(np.fft.fftshift(outputSpec)))
     # Roll the electric field a little bit
     offset = np.array(np.unravel_index(np.abs(outputField).argmax(), outputField.shape))
-    print("The ray-tracing calculation differ from the actual beam center by a few pixels:", offset)
+    #print("The ray-tracing calculation differ from the actual beam center by a few pixels:", offset)
 
     outputDict['field_grid'] = np.roll(outputField, shift=-offset + np.array(outputField.shape) // 2, axis=(0, 1, 2))
 
