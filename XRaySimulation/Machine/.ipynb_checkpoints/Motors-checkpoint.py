@@ -365,28 +365,6 @@ def get_motors_with_model_for_axis(model, color='k', axis='x'):
     return motor_obj
 
 
-def install_motor_A_on_B(motorA, motorB):
-    """
-    This function tries to solve the challenge of imposing geometric relation
-    between different motors.
-
-    This will not solve all the problems.
-    However, I think it will solve at least some issues.
-
-    Currently, this function tries to install the motor A
-    at the center of the mounting surface of motor B.
-
-    :param motorA:
-    :param motorB:
-    :return:
-    """
-    # Find the coordinate of mounting surface of motor B.
-    mounting = np.copy(motorB.mounting_surface_pos)
-    mounting_dir = np.copy(motorB.mounting_surface_dir)
-
-    motorA_normal
-
-
 # --------------------------------------------------------------------
 #    Here, I define a few commonly used motor composition.
 #    Even though they do not have any scientific generality
@@ -485,11 +463,8 @@ class CrystalTower_x_y_theta_chi:
         crystalSurface += crystal_loc
         self.optics.shift(displacement=crystalSurface)
 
-        # Define a holder that contains all the motors for batch operation
-        self.all_obj = [self.x, self.y, self.th, self.chi, self.optics]
-
-        # Define a holder that contains all the motor objects
-        self.all_motor_obj = [self.x, self.y, self.th, self.chi]
+        # Define the color for the device visualization
+        self.color_list = ['red', 'brown', 'yellow', 'purple', 'black']
 
     def x_umv(self, target):
         """

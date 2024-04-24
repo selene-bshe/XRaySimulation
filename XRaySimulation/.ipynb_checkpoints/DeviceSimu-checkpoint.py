@@ -1,8 +1,8 @@
 import numpy as np
-
-from XRaySimulation import util
 from scipy import interpolate
 from skimage.restoration import unwrap_phase
+
+from XRaySimulation import util
 
 two_pi = 2. * np.pi
 
@@ -359,7 +359,7 @@ def align_crystal_reciprocal_lattice(crystal, axis, rot_center=None):
     :return:
     """
     if rot_center is None:
-        rot_center = crystal.surface_point
+        rot_center = np.copy(crystal.surface_point)
 
     # 1 Get the angle
     cos_val = np.dot(axis, crystal.h) / np.linalg.norm(axis) / np.linalg.norm(crystal.h)
@@ -382,7 +382,7 @@ def align_crystal_reciprocal_lattice(crystal, axis, rot_center=None):
 
 def align_crystal_geometric_bragg_reflection(crystal, kin, rot_direction=1, rot_center=None):
     if rot_center is None:
-        rot_center = crystal.surface_point
+        rot_center = np.copy(crystal.surface_point)
 
     ###########################
     #   Align the recirpocal lattice with kin
@@ -424,7 +424,7 @@ def align_crystal_dynamical_bragg_reflection(crystal, kin, rot_direction=1,
     :return:
     """
     if rot_center is None:
-        rot_center = crystal.surface_point
+        rot_center = np.copy(crystal.surface_point)
 
     # Align the crystal with geometric bragg reflection theory
     align_crystal_geometric_bragg_reflection(crystal=crystal,
@@ -580,7 +580,7 @@ def get_channel_cut_auto_align_rotMat(channelcut,
     :return:
     """
     if not (rot_center):
-        rot_center = channelcut.crystal_list[0].surface_point
+        rot_center = np.copy(channelcut.crystal_list[0].surface_point)
 
     # Get the rotated kin
     geo_Bragg_angle = util.get_bragg_angle(wave_length=two_pi / np.linalg.norm(kin),
@@ -705,6 +705,177 @@ def align_telescope_optical_axis(telescope, axis):
 
     telescope.rotate_wrt_point(rot_mat=rot_mat,
                                ref_point=telescope.lens_point)
+
+
+###############################################################################
+#         Get a temporary solution to align crystals in the x-z plane
+###############################################################################
+def get_bragg_rocking_curve_xz(kin,
+                               scan_range,
+                               scan_number,
+                               h_initial,
+                               normal_initial,
+                               thickness,
+                               chi_dict):
+    """
+
+    :param kin:
+    :param scan_range:
+    :param scan_number:
+    :param h_initial:
+    :param normal_initial:
+    :param thickness:
+    :param chi_dict:
+    :return:
+    """
+
+    # ------------------------------------------------------------
+    #          Step 0: Generate h_array and normal_array for the scanning
+    # ------------------------------------------------------------
+    h_array = np.zeros((scan_number, 3), dtype=np.float64)
+    normal_array = np.zeros((scan_number, 3), dtype=np.float64)
+
+    # Get the scanning angle
+    angles = np.linspace(start=-scan_range / 2, stop=scan_range / 2, num=scan_number)
+
+    for idx in range(scan_number):
+        rot_mat = util.rot_mat_in_xz_plane(theta=angles[idx])
+        h_array[idx] = rot_mat.dot(h_initial)
+        normal_array[idx] = rot_mat.dot(normal_initial)
+
+    # Create holder to save the reflectivity and output momentum
+    kin_grid = np.zeros_like(h_array, dtype=np.float64)
+    kin_grid[:, 0] = kin[0]
+    kin_grid[:, 1] = kin[1]
+    kin_grid[:, 2] = kin[2]
+
+    (reflect_sigma,
+     reflect_pi,
+     b_factor,
+     kout) = get_bragg_reflectivity_per_entry(kin=kin_grid,
+                                              thickness=thickness,
+                                              crystal_h=h_array,
+                                              normal=normal_array,
+                                              chi_dict=chi_dict)
+
+    return angles, reflect_sigma, reflect_pi, b_factor, kout
+
+
+def align_crystal_reciprocal_lattice_xz(crystal, axis, rot_center=None):
+    """
+
+    :param crystal: The crystal to align
+    :param axis: The direction along which the reciprocal lattice will be aligned.
+    :param rot_center:
+    :return:
+    """
+    if rot_center is None:
+        rot_center = np.copy(crystal.surface_point)
+
+    # 1 Get the angle
+    cos_val = np.dot(axis, crystal.h) / np.linalg.norm(axis) / np.linalg.norm(crystal.h)
+    rot_angle = np.arccos(np.clip(cos_val, -1, 1))
+
+    # print("rot_angle:{:.2e}".format(np.rad2deg(rot_angle)))
+
+    # 2 Try the rotation
+    rot_mat = util.rot_mat_in_xz_plane(theta=rot_angle)
+    new_h = np.dot(rot_mat, crystal.h)
+    # print(new_h)
+
+    if np.dot(new_h, axis) / np.linalg.norm(new_h) / np.linalg.norm(axis) < 0.999:
+        # print("aaa")
+        rot_mat = util.rot_mat_in_xz_plane(theta=-rot_angle)
+
+    crystal.rotate_wrt_point(rot_mat=rot_mat,
+                             ref_point=rot_center)
+
+
+def align_crystal_geometric_bragg_reflection_xz(crystal, kin, rot_direction=1, rot_center=None):
+    if rot_center is None:
+        rot_center = np.copy(crystal.surface_point)
+
+    ###########################
+    #   Align the recirpocal lattice with kin
+    ###########################
+    align_crystal_reciprocal_lattice_xz(crystal=crystal, axis=kin, rot_center=rot_center)
+    # print(crystal.h)
+
+    ###########################
+    #   Alignment based on geometric theory of bragg diffraction
+    ###########################
+    # Estimate the Bragg angle
+    bragg_estimation = util.get_bragg_angle(wave_length=two_pi / np.linalg.norm(kin),
+                                            plane_distance=two_pi / np.linalg.norm(crystal.h))
+
+    # print("Bragg angle:{:.2e}".format(np.rad2deg(bragg_estimation)))
+
+    # Align the crystal to the estimated Bragg angle
+    rot_mat = util.rot_mat_in_xz_plane(theta=(bragg_estimation + np.pi / 2) * rot_direction)
+
+    crystal.rotate_wrt_point(rot_mat=rot_mat,
+                             ref_point=rot_center)
+
+
+def align_crystal_dynamical_bragg_reflection_xz(crystal,
+                                                kin,
+                                                rot_direction=1,
+                                                scan_range=0.0005,
+                                                scan_number=10000,
+                                                rot_center=None,
+                                                get_curve=False):
+    """
+    Align the crystal such that the incident wave vector is at the center of the
+    reflectivity curve
+
+    :param crystal:
+    :param kin:
+    :param rot_direction:
+    :param scan_range:
+    :param scan_number:
+    :param rot_center:
+    :param get_curve:
+    :return:
+    """
+    if rot_center is None:
+        rot_center = np.copy(crystal.surface_point)
+
+    # Align the crystal with geometric bragg reflection theory
+    align_crystal_geometric_bragg_reflection_xz(crystal=crystal,
+                                                kin=kin,
+                                                rot_direction=rot_direction,
+                                                rot_center=rot_center)
+
+    # Align the crystal with dynamical diffraction theory
+    (angles,
+     reflect_s,
+     reflect_p,
+     b_array,
+     kout_grid) = get_bragg_rocking_curve_xz(kin=kin,
+                                             scan_range=scan_range,
+                                             scan_number=scan_number,
+                                             h_initial=crystal.h,
+                                             normal_initial=crystal.normal,
+                                             thickness=crystal.thickness,
+                                             chi_dict=crystal.chi_dict, )
+
+    # rocking_curve = np.square(np.abs(reflect_s)) / np.abs(b_array)
+
+    # Third: find bandwidth of the rocking curve and the center of the rocking curve
+    fwhm, angle_adjust = util.get_fwhm(coordinate=angles,
+                                       curve_values=np.square(np.abs(reflect_s)),
+                                       center=True)
+
+    # Fourth: Align the crystal along that direction.
+    rot_mat = util.rot_mat_in_xz_plane(theta=angle_adjust)
+    crystal.rotate_wrt_point(rot_mat=rot_mat,
+                             ref_point=rot_center)
+    # print(rot_mat)
+    # print(angle_adjust)
+    # print(fwhm)
+
+    if get_curve:
+        return angles, np.square(np.abs(reflect_s))
 
 
 # --------------------------------------------------------------------------------------------------------------
@@ -1189,8 +1360,8 @@ def get_interpolated_eField(kvec_array, coor_dict, efield_array, k0, mode, coor_
     # 2024-04-04 implement the 3D interpolation with low efficiency first
     # Even though the calculation is less efficient, it is more universal and maybe more compatible with the simulation
     if mode == "xyz 3D":
-        print("Interpolate the electric field such that after the intpolation")
-        print("the three axes of the array are parallel to that of the x,y,z axes.")
+        #print("Interpolate the electric field such that after the intpolation")
+        #print("the three axes of the array are parallel to that of the x,y,z axes.")
         # For VCC pulse, we want to interpolate within the yz plane, or the xpp x - xpp z plane.
 
         oldShape = np.array(efield_array.shape)
@@ -1208,24 +1379,25 @@ def get_interpolated_eField(kvec_array, coor_dict, efield_array, k0, mode, coor_
         u_mat[0] = u1
         u_mat[1] = u2
         u_mat[2] = u3
-        u_mat[np.abs(u_mat)<1e-10] = 0
+        u_mat[np.abs(u_mat) < 1e-10] = 0
         u_mat /= 2 * np.pi
         u_mat_inv = np.linalg.inv(u_mat)
-        
-        print(u_mat)
-        print(u_mat_inv)
-        print(u1)
-        print(u2)
-        print(u3)
-            
+
+        #print(u_mat)
+        #print(u_mat_inv)
+        #print(u1)
+        #print(u2)
+        #print(u3)
+
         # Get the position grid for interpolation
         if coor_info_new:
-            nx = coor_info_new['nx'],
-            ny = coor_info_new['ny'],
-            nz = coor_info_new['nz'],
-            dx = coor_info_new['dx'],
-            dy = coor_info_new['dy'],
-            dz = coor_info_new['dz'],
+            nx = coor_info_new['nx']
+            ny = coor_info_new['ny']
+            nz = coor_info_new['nz']
+            dx = coor_info_new['dx']
+            dy = coor_info_new['dy']
+            dz = coor_info_new['dz']
+
 
         else:
             # Otherwise, calculate the new coordinate by analyzing the current situation.
@@ -1250,10 +1422,10 @@ def get_interpolated_eField(kvec_array, coor_dict, efield_array, k0, mode, coor_
             nx = int(nx)
             ny = int(ny)
             nz = int(nz)
-        
-        print(nx, ny, nz)
-        return 0
-    
+
+        #print(nx, ny, nz)
+        # return 0
+
         # ---------------------------------------------------
         # Get the new coordinate system
         # ---------------------------------------------------
@@ -1312,3 +1484,21 @@ def get_interpolated_eField(kvec_array, coor_dict, efield_array, k0, mode, coor_
     else:
         print("No interpolation is applied. Currently this function cannot handle a general interpolation request.")
         print("Please check the source code for this function to understand the current capability boundary.")
+
+
+def get_intensity_on_YAG(intensity, intensity_coor, intensity_loc, pixel_coor):
+    nx, ny = (pixel_coor['xCoor'].shape[0], pixel_coor['yCoor'].shape[0])
+    new_position_grid = np.zeros((nx, ny, 2))
+    new_position_grid[:, :, 0] = pixel_coor['xCoor'][:, np.newaxis]
+    new_position_grid[:, :, 1] = pixel_coor['yCoor'][np.newaxis, :]
+    new_position_grid_for_interpolation = np.reshape(new_position_grid, (nx * ny, 2))
+    del new_position_grid
+
+    yag_image = interpolate.interpn(points=(intensity_coor['xCoor'] + intensity_loc[0],
+                                            intensity_coor['yCoor'] + intensity_loc[1],),
+                                    values=intensity,
+                                    xi=new_position_grid_for_interpolation,
+                                    method='nearest',
+                                    bounds_error=False,
+                                    fill_value=0.)
+    return yag_image

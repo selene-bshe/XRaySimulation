@@ -1360,8 +1360,8 @@ def get_interpolated_eField(kvec_array, coor_dict, efield_array, k0, mode, coor_
     # 2024-04-04 implement the 3D interpolation with low efficiency first
     # Even though the calculation is less efficient, it is more universal and maybe more compatible with the simulation
     if mode == "xyz 3D":
-        print("Interpolate the electric field such that after the intpolation")
-        print("the three axes of the array are parallel to that of the x,y,z axes.")
+        #print("Interpolate the electric field such that after the intpolation")
+        #print("the three axes of the array are parallel to that of the x,y,z axes.")
         # For VCC pulse, we want to interpolate within the yz plane, or the xpp x - xpp z plane.
 
         oldShape = np.array(efield_array.shape)
@@ -1383,11 +1383,11 @@ def get_interpolated_eField(kvec_array, coor_dict, efield_array, k0, mode, coor_
         u_mat /= 2 * np.pi
         u_mat_inv = np.linalg.inv(u_mat)
 
-        print(u_mat)
-        print(u_mat_inv)
-        print(u1)
-        print(u2)
-        print(u3)
+        #print(u_mat)
+        #print(u_mat_inv)
+        #print(u1)
+        #print(u2)
+        #print(u3)
 
         # Get the position grid for interpolation
         if coor_info_new:
@@ -1423,7 +1423,7 @@ def get_interpolated_eField(kvec_array, coor_dict, efield_array, k0, mode, coor_
             ny = int(ny)
             nz = int(nz)
 
-        print(nx, ny, nz)
+        #print(nx, ny, nz)
         # return 0
 
         # ---------------------------------------------------
