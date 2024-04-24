@@ -83,6 +83,8 @@ class XppController_TG:
         self.vcc_shutter = True
 
         # Step 3 Move the devices to their rough position
+        self.t1.insatll()
+
 
         # Step 4 Rotate the crystals such that they are at the ideal location
 
