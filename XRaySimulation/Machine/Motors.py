@@ -741,7 +741,7 @@ class L_Bracket:
         if dimension is None:
             dimension = (10e4, 10e4)
 
-        self.top_mount_dir = np.array([1.0, 0, 0, ])  # the normal direction of the top mounting surface
+        self.top_mount_dir = np.array([0, 1.0, 0, ])  # the normal direction of the top mounting surface
         self.top_mount_pos = np.array([height, 0, 0, ])  # The center of the top mounting surface
 
         self.bottom_mount_dir = np.array([1.0, 0, 0, ])  # the normal direction of the top mounting surface
@@ -849,9 +849,12 @@ def get_motors_with_model_for_axis(model, rot_center_height=70e3, color='k', axi
         if axis == 'x':
             pass
         elif axis == 'y':
-            rot_mat = np.array([[0, 1, 0],
-                                [-1, 0, 0],
+            rot_mat = np.array([[0, -1, 0],
+                                [1, 0, 0],
                                 [0, 0, 1]])
+            rot_mat = np.dot(rot_mat, np.array([[0, 0, 1],
+                                                [0, 1, 0],
+                                                [-1, 0, 0]]))
             motor_obj.rotate_wrt_point(rot_mat=rot_mat,
                                        ref_point=np.copy(motor_obj.bottom_mount_pos))
 
@@ -863,7 +866,38 @@ def get_motors_with_model_for_axis(model, rot_center_height=70e3, color='k', axi
                                        ref_point=np.copy(motor_obj.bottom_mount_pos))
             pass
 
-    if model == "XA07A":
+    elif model == "XA10A-L101":
+        print("Create a XA10A motor, moving along x axis.")
+        motor_obj = xyMotor(upperLim=50 * 1000,
+                            lowerLim=-50 * 1000,
+                            res=2,
+                            backlash=100,
+                            speed_um_per_ps=1 * 1000 / 1e12,
+                            dimension=[190e3, 100e3],
+                            height=50e3,
+                            color=color)
+        if axis == 'x':
+            pass
+        elif axis == 'y':
+            rot_mat = np.array([[0, -1, 0],
+                                [1, 0, 0],
+                                [0, 0, 1]])
+            rot_mat = np.dot(rot_mat, np.array([[0, 0, 1],
+                                                [0, 1, 0],
+                                                [-1, 0, 0]]))
+            motor_obj.rotate_wrt_point(rot_mat=rot_mat,
+                                       ref_point=np.copy(motor_obj.bottom_mount_pos))
+
+        elif axis == "z":
+            rot_mat = np.array([[1, 0, 0],
+                                [0, 0, -1],
+                                [0, 1, 0]])
+            motor_obj.rotate_wrt_point(rot_mat=rot_mat,
+                                       ref_point=np.copy(motor_obj.bottom_mount_pos))
+            pass
+
+
+    elif model == "XA07A":
         print("Create a XA10A motor, moving along x axis.")
         motor_obj = xyMotor(upperLim=10 * 1000,
                             lowerLim=-10 * 1000,
@@ -876,9 +910,12 @@ def get_motors_with_model_for_axis(model, rot_center_height=70e3, color='k', axi
         if axis == 'x':
             pass
         elif axis == 'y':
-            rot_mat = np.array([[0, 1, 0],
-                                [-1, 0, 0],
+            rot_mat = np.array([[0, -1, 0],
+                                [1, 0, 0],
                                 [0, 0, 1]])
+            rot_mat = np.dot(rot_mat, np.array([[0, 0, 1],
+                                                [0, 1, 0],
+                                                [-1, 0, 0]]))
             motor_obj.rotate_wrt_point(rot_mat=rot_mat,
                                        ref_point=np.copy(motor_obj.bottom_mount_pos))
         elif axis == "z":
@@ -889,7 +926,7 @@ def get_motors_with_model_for_axis(model, rot_center_height=70e3, color='k', axi
                                        ref_point=np.copy(motor_obj.bottom_mount_pos))
             pass
 
-    if model == "ABL1000WB":
+    elif model == "ABL1000WB":
         print("Create a ABL1000WB motor, moving along x axis.")
         motor_obj = xyMotor(upperLim=25 * 1000,
                             lowerLim=-25 * 1000,
@@ -913,7 +950,7 @@ def get_motors_with_model_for_axis(model, rot_center_height=70e3, color='k', axi
             pass
 
     elif model == "RA10A":
-        print("Create a RA10A motor, rotating around z axis.")
+        print("Create a {} motor, rotating around y axis.".format(model))
         motor_obj = RotationMotor(upperLim=np.deg2rad(180),
                                   lowerLim=-np.deg2rad(-180),
                                   res=np.deg2rad(0.002),
@@ -922,6 +959,35 @@ def get_motors_with_model_for_axis(model, rot_center_height=70e3, color='k', axi
                                   dimension=[100e3, 100e3],
                                   height=60e3,
                                   color=color)
+
+    elif model == "RA05A":
+        print("Create a {} motor, rotating around y axis.".format(model))
+        motor_obj = RotationMotor(upperLim=np.deg2rad(180),
+                                  lowerLim=-np.deg2rad(-180),
+                                  res=np.deg2rad(0.002),
+                                  backlash=0.03,
+                                  speed_rad_per_ps=np.deg2rad(0.1) / 1e12,
+                                  dimension=[100e3, 100e3],
+                                  height=60e3,
+                                  color=color)
+        if axis == 'x':
+            print("Rotate motor to rotate around x axis")
+            rot_mat = np.array([[0, -1, 0],
+                                [1, 0, 0],
+                                [0, 0, 1]])
+            motor_obj.rotate_wrt_point(rot_mat=rot_mat,
+                                       ref_point=np.copy(motor_obj.bottom_mount_pos))
+        elif axis == 'y':
+            pass
+        elif axis == "z":
+            print("Rotate motor to rotate around z axis")
+            rot_mat = np.array([[0, 0, 1],
+                                [0, 1, 0],
+                                [-1, 0, 0]])
+            motor_obj.rotate_wrt_point(rot_mat=rot_mat,
+                                       ref_point=np.copy(motor_obj.bottom_mount_pos))
+            pass
+
     elif model == "ZA10A":
         print("Create a XA10A motor, moving along y axis.")
         motor_obj = zMotor(upperLim=7e3,
@@ -945,19 +1011,69 @@ def get_motors_with_model_for_axis(model, rot_center_height=70e3, color='k', axi
                                 height=26e3,
                                 color=color)
         if axis == 'x':
+            print("Rotate motor to rotate around x axis")
+
             rot_mat = np.array([[1, 0, 0],
-                                [0, 0, -1],
-                                [0, 1, 0]])
+                                [0, 0, 1],
+                                [0, -1, 0]])
             motor_obj.rotate_wrt_point(rot_mat=rot_mat,
                                        ref_point=np.copy(motor_obj.bottom_mount_pos))
         elif axis == 'y':
-            rot_mat = np.array([[0, 1, 0],
-                                [-1, 0, 0],
+            print("Rotate motor to rotate around y axis")
+
+            rot_mat = np.array([[0, -1, 0],
+                                [1, 0, 0],
                                 [0, 0, 1]])
+            rot_mat = np.dot(rot_mat, np.array([[0, 0, 1],
+                                                [0, 1, 0],
+                                                [-1, 0, 0]]))
             motor_obj.rotate_wrt_point(rot_mat=rot_mat,
                                        ref_point=np.copy(motor_obj.bottom_mount_pos))
         elif axis == "z":
             pass
+
+    elif model == "SA05A-R2S01":
+        print("Create a {} motor pair. The normal is pointing along y".format(model))
+        motor_obj1 = SwivalMotor(upperLim=np.deg2rad(5),
+                                 lowerLim=-np.deg2rad(-5),
+                                 res=np.deg2rad(0.002126),
+                                 backlash=0.05,
+                                 speed_rad_per_ps=np.deg2rad(0.4) / 1e12,
+                                 dimension=[50e3, 50e3],
+                                 rot_center_height=68,
+                                 height=18e3,
+                                 color=color)
+        motor_obj2 = SwivalMotor(upperLim=np.deg2rad(5),
+                                 lowerLim=-np.deg2rad(-5),
+                                 res=np.deg2rad(0.002126),
+                                 backlash=0.05,
+                                 speed_rad_per_ps=np.deg2rad(0.4) / 1e12,
+                                 dimension=[50e3, 50e3],
+                                 rot_center_height=50,
+                                 height=18e3,
+                                 color=color)
+        rot_mat = np.array([[1, 0, 0],
+                            [0, 0, 1],
+                            [0, -1, 0]])
+        motor_obj2.rotate_wrt_point(rot_mat=rot_mat, ref_point=np.copy(motor_obj2.bottom_mount_pos))
+        motor_obj = install_motors_on_motor_or_adaptors(motor_tower=[motor_obj2, ],
+                                                        motor_or_adaptor=motor_obj1)
+        if axis == 'x':
+            print("Rotate motor to face x axis")
+            rot_mat = np.array([[0, -1, 0],
+                                [1, 0, 0],
+                                [0, 0, 1]])
+            motor_obj1.rotate_wrt_point(rot_mat=rot_mat,
+                                        ref_point=np.copy(motor_obj1.bottom_mount_pos))
+            motor_obj2.rotate_wrt_point(rot_mat=rot_mat,
+                                        ref_point=np.copy(motor_obj1.bottom_mount_pos))
+        elif axis == 'y':
+            print("Warning, cannot create {} along y axis automatically.".format(model))
+            print("Please create this motor manually.")
+        elif axis == "z":
+            print("Warning, cannot create {} along z axis automatically.".format(model))
+            print("Please create this motor manually.")
+
     else:
         print("Motor with model {} has not been defined in this simulator.".format(model))
         motor_obj = 0
@@ -965,13 +1081,6 @@ def get_motors_with_model_for_axis(model, rot_center_height=70e3, color='k', axi
     return motor_obj
 
 
-# --------------------------------------------------------------------
-#    Here, I define a few commonly used motor composition.
-#    Even though they do not have any scientific generality
-#    my gut feeling is that they should have a long enough
-#    lifetime that deserve such a position in the main
-#    body of this simulation package.
-# --------------------------------------------------------------------
 class CrystalTower_x_y_theta_chi:
     def __init__(self, channelCut, crystal_loc):
         # Create the instance of each motors and adaptors
@@ -1125,181 +1234,71 @@ class Grating_tower:
     def __init__(self,
                  grating_1,
                  grating_m1):
-        # Create the instance of each motors
+        # Create the instance of each motor and adaptors
+        self.adaptor1 = AdaptorPlate(height=14e3, dimension=[70e3, 70e3])
+        self.x = get_motors_with_model_for_axis(model="XA07A")
+        self.adaptor2 = L_Bracket(height=159e3, dimension=[70e3, 70e3])
+        self.y = get_motors_with_model_for_axis(model="XA07A", axis='y')
+        self.pi = get_motors_with_model_for_axis(model='RA05A', axis='x')
+        (self.roll, self.yaw) = get_motors_with_model_for_axis(model='SA05A-R2S01', axis='x')
+        self.adaptor3 = AdaptorPlate(height=50e3, dimension=[50e3, 50e3])
 
-        self.x = xyMotor(upperLim=12.5 * 1000,
-                         lowerLim=-12.5 * 1000,
-                         res=5,
-                         backlash=100,
-                         speed_um_per_ps=1 * 1000 / 1e12, )
+        # Install adaptors and motors
+        # Rotate the adaptor 3 to install it on the roll yaw motor
+        rot_mat = np.array([[0, -1, 0],
+                            [1, 0, 0],
+                            [0, 0, 1]])
+        self.adaptor3.rotate_wrt_point(rot_mat=rot_mat, ref_point=np.copy(self.adaptor3.bottom_mount_pos))
 
-        self.y = xyMotor(upperLim=25000,
-                         lowerLim=-25000,
-                         res=5,
-                         backlash=100,
-                         speed_um_per_ps=1 * 1000 / 1e12, )
+        self.all_obj = install_motors_on_motor_or_adaptors(motor_tower=[self.adaptor3, ], motor_or_adaptor=self.yaw)
+        self.all_obj = install_motors_on_motor_or_adaptors(motor_tower=self.all_obj, motor_or_adaptor=self.roll)
+        self.all_obj = install_motors_on_motor_or_adaptors(motor_tower=self.all_obj, motor_or_adaptor=self.pi)
+        self.all_obj = install_motors_on_motor_or_adaptors(motor_tower=self.all_obj, motor_or_adaptor=self.y)
+        self.all_obj = install_motors_on_motor_or_adaptors(motor_tower=self.all_obj, motor_or_adaptor=self.adaptor2)
+        self.all_obj = install_motors_on_motor_or_adaptors(motor_tower=self.all_obj, motor_or_adaptor=self.x)
+        self.all_obj = install_motors_on_motor_or_adaptors(motor_tower=self.all_obj, motor_or_adaptor=self.adaptor1)
 
-        self.pi = RotationMotor(upperLim=np.deg2rad(360),
-                                lowerLim=-np.deg2rad(360),
-                                res=1e-6,
-                                backlash=np.deg2rad(-0.005),
-                                speed_rad_per_ps=0.01 / 1e12, )
-
-        self.roll = RotationMotor(upperLim=np.deg2rad(5),
-                                  lowerLim=-np.deg2rad(5),
-                                  res=1e-6,
-                                  backlash=np.deg2rad(-0.005),
-                                  speed_rad_per_ps=0.1 / 1e12, )
-
-        self.yaw = RotationMotor(upperLim=np.deg2rad(5),
-                                 lowerLim=-np.deg2rad(5),
-                                 res=1e-6,
-                                 backlash=np.deg2rad(-0.005),
-                                 speed_rad_per_ps=0.1 / 1e12, )
-
+        # Install the two gratings
+        displacement = self.adaptor3.top_mount_pos - grating_1.surface_point
+        grating_1.shape(displacement=displacement)
+        displacement = self.adaptor3.top_mount_pos - grating_m1.surface_point
+        grating_m1.shape(displacement=displacement)
         self.grating_1 = grating_1
         self.grating_m1 = grating_m1
 
-        # ------------------------------------------
-        # Change the motor configuration
-        # ------------------------------------------
-        self.x.motion_dir = np.zeros(3, dtype=np.float64)
-        self.x.motion_dir[1] = 1.0  #
-        # Define the installation location of the x stage
-        x_stage_center = np.zeros(3, dtype=np.float64)
-        self.x.shift(displacement=x_stage_center)
+        # Add the gratings to the grating tower
 
-        self.y.motion_dir = np.zeros(3, dtype=np.float64)
-        self.y.motion_dir[0] = 1.0  #
-        # Define the installation location of the x stage
-        y_stage_center = np.zeros(3, dtype=np.float64)
-        y_stage_center[0] = 30 * 1000  # The height of the x stage.
-        self.y.shift(displacement=y_stage_center)
-
-        self.pi.deg0direction = np.zeros(3, dtype=np.float64)
-        self.pi.deg0direction[1] = 1.0  #
-        self.pi.rotation_axis = np.zeros(3, dtype=np.float64)
-        self.pi.rotation_axis[0] = 1.0
-        self.pi.rotation_center = np.zeros(3, dtype=np.float64)
-
-        # Define the installation location of the x stage
-        pi_stage_center = np.zeros(3, dtype=np.float64)
-        pi_stage_center[0] = 30 * 1000 + 20 * 1000  # The height of the x stage + the height of the y stage
-        self.pi.shift(displacement=pi_stage_center)
-
-        self.roll.deg0direction = np.zeros(3, dtype=np.float64)
-        self.roll.deg0direction[0] = 1.0  #
-        self.roll.rotation_axis = np.zeros(3, dtype=np.float64)
-        self.roll.rotation_axis[2] = 1.0
-        self.roll.rotation_center = np.zeros(3, dtype=np.float64)
-        self.roll.rotation_center[1] = 70e3  # The rotation center of the chi stage is high in the air.
-
-        # Define the installation location of the x stage
-        roll_stage_center = np.zeros(3, dtype=np.float64)
-        roll_stage_center[0] = 30 * 1000 + 20 * 1000 + 30e3  # The height of the x stage + the height of the y stage
-        # + the height of the theta stage
-        self.roll.shift(displacement=roll_stage_center)
-
-        self.yaw.deg0direction = np.zeros(3, dtype=np.float64)
-        self.yaw.deg0direction[0] = 1.0  #
-        self.yaw.rotation_axis = np.zeros(3, dtype=np.float64)
-        self.yaw.rotation_axis[2] = 1.0
-        self.yaw.rotation_center = np.zeros(3, dtype=np.float64)
-        self.yaw.rotation_center[1] = 70e3  # The rotation center of the chi stage is high in the air.
-
-        # Define the installation location of the x stage
-        yaw_stage_center = np.zeros(3, dtype=np.float64)
-        yaw_stage_center[0] = 30 * 1000 + 20 * 1000 + 30e3  # The height of the x stage + the height of the y stage
-        # + the height of the theta stage
-        self.roll.shift(displacement=yaw_stage_center)
-
-        # Move the crystal such that the
-        crystalSurface = np.zeros(3, dtype=np.float64)
-        crystalSurface[0] = 30 * 1000 + 20 * 1000 + 30e3 + 20e3
-        self.grating_1.shift(displacement=crystalSurface)
-        self.grating_m1.shift(displacement=crystalSurface)
-
-        # Define the color for the device visualization
-        self.color_list = ['red', 'brown', 'yellow', 'purple', 'black']
+        self.all_obj += [self.grating_1, self.grating_m1]
 
     def x_umv(self, target):
-        """
-        If one moves the x stage, then one moves the
-        y stage, theta stage, chi stage, crystal
-        together with it.
-
-        :param target:
-        :return:
-        """
-
-        # Get the displacement vector for the motion
-        displacement = self.x.motion_dir * (target - self.x.control_location)
-
-        # Shift all the motors and crystals with it
-        motion_time = self.x.user_move_abs(target=target, getMotionTime=True)
-        self.y.shift(displacement=displacement, include_boundary=True)
-        self.pi.shift(displacement=displacement, include_boundary=True)
-        self.roll.shift(displacement=displacement, include_boundary=True)
-        self.yaw.shift(displacement=displacement, include_boundary=True)
-        self.grating_1.shift(displacement=displacement, include_boundary=True)
-        self.grating_m1.shift(displacement=displacement, include_boundary=True)
+        motion_time, displacement = self.x.user_move_abs(target=target, getMotionTime=True)
+        for item in self.all_obj[2:]:
+            item.shift(displacement=displacement)
+        return motion_time
 
     def y_umv(self, target):
-        # Get the displacement vector for the motion
-        displacement = self.y.motion_dir * (target - self.y.control_location)
-
-        # Shift all the motors and crystals with it
-        motion_time = self.y.user_move_abs(target=target, getMotionTime=True)
-        self.pi.shift(displacement=displacement, include_boundary=True)
-        self.roll.shift(displacement=displacement, include_boundary=True)
-        self.yaw.shift(displacement=displacement, include_boundary=True)
-        self.grating_1.shift(displacement=displacement, include_boundary=True)
-        self.grating_m1.shift(displacement=displacement, include_boundary=True)
+        motion_time, displacement = self.y.user_move_abs(target=target, getMotionTime=True)
+        for item in self.all_obj[4:]:
+            item.shift(displacement=displacement)
+        return motion_time
 
     def pi_umv(self, target):
-        # Get the displacement vector for the motion
-        displacement = (target - self.pi.control_location)
-
-        # Get the rotation matrix for the stages above the rotation stage
-        rotMat = util.get_rotmat_around_axis(angleRadian=displacement, axis=self.pi.rotation_axis)
-
-        # Shift all the motors and crystals with it
-        motion_time = self.pi.user_move_abs(target=target, getMotionTime=True)
-        self.roll.rotate_wrt_point(rot_mat=rotMat, ref_point=self.pi.rotation_center, include_boundary=True)
-        self.yaw.rotate_wrt_point(rot_mat=rotMat, ref_point=self.pi.rotation_center, include_boundary=True)
-        self.grating_1.rotate_wrt_point(rot_mat=rotMat, ref_point=self.pi.rotation_center,
-                                        include_boundary=True)
-        self.grating_m1.rotate_wrt_point(rot_mat=rotMat, ref_point=self.pi.rotation_center,
-                                         include_boundary=True)
+        motion_time, rotMat = self.pi.user_move_abs(target=target, getMotionTime=True)
+        for item in self.all_obj[5:]:
+            item.rotate_wrt_point(rot_mat=rotMat, ref_point=self.pi.rotation_center)
+        return motion_time
 
     def roll_umv(self, target):
-        # Get the displacement vector for the motion
-        displacement = (target - self.roll.control_location)
-
-        # Get the rotation matrix for the stages above the rotation stage
-        rotMat = util.get_rotmat_around_axis(angleRadian=displacement, axis=self.roll.rotation_axis)
-
-        # Shift all the motors and crystals with it
-        motion_time = self.roll.user_move_abs(target=target, getMotionTime=True)
-        self.yaw.rotate_wrt_point(rot_mat=rotMat, ref_point=self.pi.rotation_center, include_boundary=True)
-        self.grating_1.rotate_wrt_point(rot_mat=rotMat, ref_point=self.roll.rotation_center,
-                                        include_boundary=True)
-        self.grating_m1.rotate_wrt_point(rot_mat=rotMat, ref_point=self.roll.rotation_center,
-                                         include_boundary=True)
+        motion_time, rotMat = self.roll.user_move_abs(target=target, getMotionTime=True)
+        for item in self.all_obj[6:]:
+            item.rotate_wrt_point(rot_mat=rotMat, ref_point=self.roll.rotation_center)
+        return motion_time
 
     def yaw_umv(self, target):
-        # Get the displacement vector for the motion
-        displacement = (target - self.yaw.control_location)
-
-        # Get the rotation matrix for the stages above the rotation stage
-        rotMat = util.get_rotmat_around_axis(angleRadian=displacement, axis=self.yaw.rotation_axis)
-
-        # Shift all the motors and crystals with it
-        motion_time = self.yaw.user_move_abs(target=target, getMotionTime=True)
-        self.grating_1.rotate_wrt_point(rot_mat=rotMat, ref_point=self.yaw.rotation_center,
-                                        include_boundary=True)
-        self.grating_m1.rotate_wrt_point(rot_mat=rotMat, ref_point=self.yaw.rotation_center,
-                                         include_boundary=True)
+        motion_time, rotMat = self.yaw.user_move_abs(target=target, getMotionTime=True)
+        for item in self.all_obj[6:]:
+            item.rotate_wrt_point(rot_mat=rotMat, ref_point=self.yaw.rotation_center)
+        return motion_time
 
 
 class Mirror_tower1:
@@ -1316,103 +1315,66 @@ class Mirror_tower1:
                  mirror,
                  crystal_loc):
         # Create the instance of each motors
-
-        self.x = xyMotor(upperLim=12.5 * 1000,
-                         lowerLim=-12.5 * 1000,
-                         res=5,
-                         backlash=100,
-                         speed_um_per_ps=1 * 1000 / 1e12, )
-
-        self.y = xyMotor(upperLim=25000,
-                         lowerLim=-25000,
-                         res=5,
-                         backlash=100,
-                         speed_um_per_ps=1 * 1000 / 1e12, )
-
-        self.pi = RotationMotor(upperLim=np.deg2rad(5),
-                                lowerLim=-np.deg2rad(5),
-                                res=1e-6,
-                                backlash=np.deg2rad(-0.005),
-                                speed_rad_per_ps=0.1 / 1e12, )
-
+        self.adapter1 = AdaptorPlate(height=20e3, dimension=[100e3, 200e3])
+        self.z = get_motors_with_model_for_axis(model="XA10A-L101", axis='z')
+        self.x = get_motors_with_model_for_axis(model="XA10A", axis='x')
+        self.adapter2 = AdaptorPlate(height=10e3, dimension=[100e3, 250e3])
+        self.roll = get_motors_with_model_for_axis(model="SA07A", rot_center_height=96e3, axis="z")
+        self.adapter3 = L_Bracket(height=10e3, dimension=[70e3, 70e3])
+        self.yaw = get_motors_with_model_for_axis(model="SA07A", rot_center_height=70e3, axis="z")
+        self.adapter4 = AdaptorPlate(height=70, dimension=[70e3, 70e3])
         self.optics = mirror
 
-        # ------------------------------------------
-        # Change the motor configuration
-        # ------------------------------------------
-        self.x.motion_dir = np.zeros(3, dtype=np.float64)
-        self.x.motion_dir[1] = 1.0  #
-        # Define the installation location of the x stage
-        x_stage_center = np.zeros(3, dtype=np.float64)
-        self.x.shift(displacement=x_stage_center)
+        # Install mirror to the adaptor 4
+        rot_mat = util.get_rotmat_around_axis(angleRadian=np.pi, axis=np.array([0., 0., 1]))
+        self.optics.rotate_wrt_point(rot_mat=rot_mat, ref_point=np.copy(self.optics.surface_point))
+        self.adapter4.rotate_wrt_point(rot_mat=rot_mat, ref_point=np.copy(self.adapter4.bottom_mount_pos))
+        self.yaw.rotate_wrt_point(rot_mat=rot_mat, ref_point=np.copy(self.yaw.bottom_mount_pos))
 
-        self.y.motion_dir = np.zeros(3, dtype=np.float64)
-        self.y.motion_dir[0] = 1.0  #
-        # Define the installation location of the x stage
-        y_stage_center = np.zeros(3, dtype=np.float64)
-        y_stage_center[0] = 30 * 1000  # The height of the x stage.
-        self.y.shift(displacement=y_stage_center)
+        displacement = self.adapter4.top_mount_pos + np.array([86.3e3 + 5e3, 0, 0]) - self.optics.surface_point
+        self.optics.shift(displacement=displacement)
 
-        self.pi.deg0direction = np.zeros(3, dtype=np.float64)
-        self.pi.deg0direction[0] = 1.0  #
-        self.pi.rotation_axis = np.zeros(3, dtype=np.float64)
-        self.pi.rotation_axis[2] = 1.0
-        self.pi.rotation_center = np.zeros(3, dtype=np.float64)
-        self.pi.rotation_center[0] = 70e3  # The rotation center of the chi stage is high in the air.
+        self.all_obj = [self.adapter4, self.optics]
+        self.all_obj = install_motors_on_motor_or_adaptors(motor_tower=self.all_obj, motor_or_adaptor=self.yaw)
 
-        # Define the installation location of the x stage
-        pi_stage_center = np.zeros(3, dtype=np.float64)
-        pi_stage_center[0] = 30 * 1000 + 20 * 1000 + 30e3  # The height of the x stage + the height of the y stage
-        # + the height of the theta stage
-        self.pi.shift(displacement=pi_stage_center)
+        # Adjust the dimension of adaptor 3
+        self.adapter3.top_mount_pos += np.array([0, 75.35e3, 0])
+        self.adapter3.top_mount_pos[0] = 19e3
+        self.all_obj = install_motors_on_motor_or_adaptors(motor_tower=self.all_obj, motor_or_adaptor=self.adapter3)
 
-        # Move the crystal such that the
-        crystalSurface = np.zeros(3, dtype=np.float64)
-        crystalSurface[0] = 30 * 1000 + 20 * 1000 + 30e3 + 20e3
-        crystalSurface += crystal_loc
-        self.optics.shift(displacement=crystalSurface)
+        # Install other components
+        # Adjust the dimension of adaptor 2
+        self.adapter2.bottom_mount_pos[2] = -75e3
+        self.adapter2.top_mount_pos[2] = 125e3 - 35e3
+        self.all_obj = install_motors_on_motor_or_adaptors(motor_tower=self.all_obj, motor_or_adaptor=self.roll)
+        self.all_obj = install_motors_on_motor_or_adaptors(motor_tower=self.all_obj, motor_or_adaptor=self.adapter2)
+        self.all_obj = install_motors_on_motor_or_adaptors(motor_tower=self.all_obj, motor_or_adaptor=self.x)
+        self.all_obj = install_motors_on_motor_or_adaptors(motor_tower=self.all_obj, motor_or_adaptor=self.z)
+        self.all_obj = install_motors_on_motor_or_adaptors(motor_tower=self.all_obj, motor_or_adaptor=self.adapter1)
 
-        # Define the color for the device visualization
-        self.color_list = ['red', 'brown', 'yellow', 'purple', 'black']
+    def z_umv(self, target):
+        motion_time, displacement = self.z.user_move_abs(target=target, getMotionTime=True)
+        for item in self.all_obj[2]:
+            item.shift(displacement=displacement)
+        return motion_time
 
     def x_umv(self, target):
-        """
-        If one moves the x stage, then one moves the
-        y stage, theta stage, chi stage, crystal
-        together with it.
+        motion_time, displacement = self.x.user_move_abs(target=target, getMotionTime=True)
+        for item in self.all_obj[3]:
+            item.shift(displacement=displacement)
+        return motion_time
 
-        :param target:
-        :return:
-        """
+    def roll_umv(self, target):
+        motion_time, rotMat = self.roll.user_move_abs(target=target, getMotionTime=True)
+        for item in self.all_obj[5:]:
+            item.rotate_wrt_point(rot_mat=rotMat, ref_point=self.roll.rotation_center)
+        return motion_time
 
-        # Get the displacement vector for the motion
-        displacement = self.x.motion_dir * (target - self.x.control_location)
-
-        # Shift all the motors and crystals with it
-        motion_time = self.x.user_move_abs(target=target, getMotionTime=True)
-        self.y.shift(displacement=displacement, include_boundary=True)
-        self.pi.shift(displacement=displacement, include_boundary=True)
-        self.optics.shift(displacement=displacement, include_boundary=True)
-
-    def y_umv(self, target):
-        # Get the displacement vector for the motion
-        displacement = self.y.motion_dir * (target - self.y.control_location)
-
-        # Shift all the motors and crystals with it
-        motion_time = self.y.user_move_abs(target=target, getMotionTime=True)
-        self.pi.shift(displacement=displacement, include_boundary=True)
-        self.optics.shift(displacement=displacement, include_boundary=True)
-
-    def pi_umv(self, target):
-        # Get the displacement vector for the motion
-        displacement = (target - self.pi.control_location)
-
-        # Get the rotation matrix for the stages above the rotation stage
-        rotMat = util.get_rotmat_around_axis(angleRadian=displacement, axis=self.pi.rotation_axis)
-
-        # Shift all the motors and crystals with it
-        motion_time = self.pi.user_move_abs(target=target, getMotionTime=True)
-        self.optics.rotate_wrt_point(rot_mat=rotMat, ref_point=self.pi.rotation_center, include_boundary=True)
+    def yaw_umv(self, target):
+        motion_time, rotMat = self.yaw.user_move_abs(target=target, getMotionTime=True)
+        for item in self.all_obj[7:]:
+            item.rotate_wrt_point(rot_mat=rotMat, ref_point=self.yaw.rotation_center)
+        return motion_time
 
 
 class Mirror_tower2:
@@ -1429,301 +1391,181 @@ class Mirror_tower2:
                  mirror,
                  crystal_loc):
         # Create the instance of each motors
-
-        self.z = xyMotor(upperLim=12.5 * 1000,
-                         lowerLim=-12.5 * 1000,
-                         res=5,
-                         backlash=100,
-                         speed_um_per_ps=1 * 1000 / 1e12, )
-
-        self.y = xyMotor(upperLim=25000,
-                         lowerLim=-25000,
-                         res=5,
-                         backlash=100,
-                         speed_um_per_ps=1 * 1000 / 1e12, )
-
-        self.yaw = RotationMotor(upperLim=np.deg2rad(5),
-                                 lowerLim=-np.deg2rad(5),
-                                 res=1e-6,
-                                 backlash=np.deg2rad(-0.005),
-                                 speed_rad_per_ps=0.1 / 1e12, )
-
+        self.adapter1 = AdaptorPlate(height=20e3, dimension=[100e3, 200e3])
+        self.z = get_motors_with_model_for_axis(model="XA10A-L101", axis='z')
+        self.x = get_motors_with_model_for_axis(model="XA10A", axis='x')
+        self.adapter2 = AdaptorPlate(height=10e3, dimension=[100e3, 250e3])
+        self.roll = get_motors_with_model_for_axis(model="SA07A", rot_center_height=96e3, axis="z")
+        self.adapter3 = L_Bracket(height=10e3, dimension=[70e3, 70e3])
+        self.yaw = get_motors_with_model_for_axis(model="SA07A", rot_center_height=70e3, axis="z")
+        self.adapter4 = AdaptorPlate(height=70, dimension=[70e3, 70e3])
         self.optics = mirror
 
-        # ------------------------------------------
-        # Change the motor configuration
-        # ------------------------------------------
-        self.z.motion_dir = np.zeros(3, dtype=np.float64)
-        self.z.motion_dir[1] = 1.0  #
-        # Define the installation location of the x stage
-        z_stage_center = np.zeros(3, dtype=np.float64)
-        self.z.shift(displacement=z_stage_center)
+        # Install mirror to the adaptor 4
+        rot_mat = util.get_rotmat_around_axis(angleRadian=np.pi, axis=np.array([0., 0., 1]))
+        self.optics.rotate_wrt_point(rot_mat=rot_mat, ref_point=np.copy(self.optics.surface_point))
+        self.adapter4.rotate_wrt_point(rot_mat=rot_mat, ref_point=np.copy(self.adapter4.bottom_mount_pos))
+        self.yaw.rotate_wrt_point(rot_mat=rot_mat, ref_point=np.copy(self.yaw.bottom_mount_pos))
 
-        self.y.motion_dir = np.zeros(3, dtype=np.float64)
-        self.y.motion_dir[0] = 1.0  #
-        # Define the installation location of the x stage
-        y_stage_center = np.zeros(3, dtype=np.float64)
-        y_stage_center[0] = 30 * 1000  # The height of the x stage.
-        self.y.shift(displacement=y_stage_center)
+        displacement = self.adapter4.top_mount_pos + np.array([86.3e3 + 5e3, 0, 0]) - self.optics.surface_point
+        self.optics.shift(displacement=displacement)
 
-        self.yaw.deg0direction = np.zeros(3, dtype=np.float64)
-        self.yaw.deg0direction[0] = 1.0  #
-        self.yaw.rotation_axis = np.zeros(3, dtype=np.float64)
-        self.yaw.rotation_axis[2] = 1.0
-        self.yaw.rotation_center = np.zeros(3, dtype=np.float64)
-        self.yaw.rotation_center[0] = 70e3  # The rotation center of the chi stage is high in the air.
+        self.all_obj = [self.adapter4, self.optics]
+        self.all_obj = install_motors_on_motor_or_adaptors(motor_tower=self.all_obj, motor_or_adaptor=self.yaw)
 
-        # Define the installation location of the x stage
-        yaw_stage_center = np.zeros(3, dtype=np.float64)
-        yaw_stage_center[0] = 30 * 1000 + 20 * 1000 + 30e3  # The height of the x stage + the height of the y stage
-        # + the height of the theta stage
-        self.yaw.shift(displacement=yaw_stage_center)
+        # Adjust the dimension of adaptor 3
+        self.adapter3.top_mount_pos += np.array([0, 75.35e3, 0])
+        self.adapter3.top_mount_pos[0] = 19e3
+        self.all_obj = install_motors_on_motor_or_adaptors(motor_tower=self.all_obj, motor_or_adaptor=self.adapter3)
+        self.all_obj = install_motors_on_motor_or_adaptors(motor_tower=self.all_obj, motor_or_adaptor=self.roll)
 
-        # Move the crystal such that the
-        crystalSurface = np.zeros(3, dtype=np.float64)
-        crystalSurface[0] = 30 * 1000 + 20 * 1000 + 30e3 + 20e3
-        crystalSurface += crystal_loc
-        self.optics.shift(displacement=crystalSurface)
+        # Everything above is copied from the mirror tower 1 class
+        # Here I need to rotate the components to get the correct geometry
+        # First rotate around the y axis
+        rot_mat = np.array([[1.0, 0, 0],
+                            [0, -1, 0],
+                            [0, 0, -1], ])
+        for item in self.all_obj:
+            item.rotate_wrt_point(rot_mat=rot_mat, ref_point=self.roll.bottom_mount_pos)
 
-        # Define the color for the device visualization
-        self.color_list = ['red', 'brown', 'yellow', 'purple', 'black']
+        # Adjust the dimension of adaptor 2
+        self.adapter2.bottom_mount_pos[2] = -75e3
+        self.adapter2.top_mount_pos[2] = 125e3 - 35e3
+        self.all_obj = install_motors_on_motor_or_adaptors(motor_tower=self.all_obj, motor_or_adaptor=self.adapter2)
+        self.all_obj = install_motors_on_motor_or_adaptors(motor_tower=self.all_obj, motor_or_adaptor=self.x)
+        self.all_obj = install_motors_on_motor_or_adaptors(motor_tower=self.all_obj, motor_or_adaptor=self.z)
+        self.all_obj = install_motors_on_motor_or_adaptors(motor_tower=self.all_obj, motor_or_adaptor=self.adapter1)
 
     def z_umv(self, target):
-        """
-        If one moves the x stage, then one moves the
-        y stage, theta stage, chi stage, crystal
-        together with it.
+        motion_time, displacement = self.z.user_move_abs(target=target, getMotionTime=True)
+        for item in self.all_obj[2]:
+            item.shift(displacement=displacement)
+        return motion_time
 
-        :param target:
-        :return:
-        """
+    def x_umv(self, target):
+        motion_time, displacement = self.x.user_move_abs(target=target, getMotionTime=True)
+        for item in self.all_obj[3]:
+            item.shift(displacement=displacement)
+        return motion_time
 
-        # Get the displacement vector for the motion
-        displacement = self.z.motion_dir * (target - self.z.control_location)
-
-        # Shift all the motors and crystals with it
-        motion_time = self.z.user_move_abs(target=target, getMotionTime=True)
-        self.y.shift(displacement=displacement, include_boundary=True)
-        self.yaw.shift(displacement=displacement, include_boundary=True)
-        self.optics.shift(displacement=displacement, include_boundary=True)
-
-    def y_umv(self, target):
-        # Get the displacement vector for the motion
-        displacement = self.y.motion_dir * (target - self.y.control_location)
-
-        # Shift all the motors and crystals with it
-        motion_time = self.y.user_move_abs(target=target, getMotionTime=True)
-        self.yaw.shift(displacement=displacement, include_boundary=True)
-        self.optics.shift(displacement=displacement, include_boundary=True)
+    def roll_umv(self, target):
+        motion_time, rotMat = self.roll.user_move_abs(target=target, getMotionTime=True)
+        for item in self.all_obj[5:]:
+            item.rotate_wrt_point(rot_mat=rotMat, ref_point=self.roll.rotation_center)
+        return motion_time
 
     def yaw_umv(self, target):
-        # Get the displacement vector for the motion
-        displacement = (target - self.yaw.control_location)
-
-        # Get the rotation matrix for the stages above the rotation stage
-        rotMat = util.get_rotmat_around_axis(angleRadian=displacement, axis=self.yaw.rotation_axis)
-
-        # Shift all the motors and crystals with it
-        motion_time = self.yaw.user_move_abs(target=target, getMotionTime=True)
-        self.optics.rotate_wrt_point(rot_mat=rotMat, ref_point=self.yaw.rotation_center, include_boundary=True)
+        motion_time, rotMat = self.yaw.user_move_abs(target=target, getMotionTime=True)
+        for item in self.all_obj[7:]:
+            item.rotate_wrt_point(rot_mat=rotMat, ref_point=self.yaw.rotation_center)
+        return motion_time
 
 
 class Silicon_tower:
-    """
-    This is just a simple realization of the most commonly used crystal tower in the miniSD device.
-    Even though initially, I was thinking that I should implement some function that
-    are more general than this.
-    In the end, I realized that it is beyond my current capability.
-    Therefore, I guess it is easier for me to just get something more concrete and to give this
-    to Khaled sooner.
-    """
+    def __init__(self, crystal):
+        # Create the instance of each motors and adaptors
+        self.adaptor1 = AdaptorPlate(height=22.7e3, dimension=[100e3, 100e3])
+        self.y = get_motors_with_model_for_axis(model="ZA10A")
+        self.z = get_motors_with_model_for_axis(model="XA10A", axis='z')
+        self.x = get_motors_with_model_for_axis(model="XA10A")
 
-    def __init__(self,
-                 crystal,
-                 crystal_loc):
-        # Create the instance of each motors
+        self.adaptor2 = AdaptorPlate(height=10e3, dimension=[75e3, 200e3])
+        self.adaptor2.bottom_mount_pos[2] = 100e3 - 35e3
+        self.adaptor2.top_mount_pos[2] = -(100e3 - 35e3)
+        self.adaptor2.top_mount_pos[0] = 0.0
 
-        self.x = xyMotor(upperLim=12.5 * 1000,
-                         lowerLim=-12.5 * 1000,
-                         res=5,
-                         backlash=100,
-                         speed_um_per_ps=1 * 1000 / 1e12, )
+        self.adaptor3 = AdaptorPlate(height=245e3, dimension=[70e3, 70e3])
+        tilt_angle3 = np.deg2rad(10)
+        self.adaptor3.top_mount_dir = np.array([np.cos(np.deg2rad(tilt_angle3)),
+                                                0, np.sin(np.deg2rad(tilt_angle3))])
 
-        self.y = xyMotor(upperLim=25000,
-                         lowerLim=-25000,
-                         res=5,
-                         backlash=100,
-                         speed_um_per_ps=1 * 1000 / 1e12, )
-
-        self.z = xyMotor(upperLim=25000,
-                         lowerLim=-25000,
-                         res=5,
-                         backlash=100,
-                         speed_um_per_ps=1 * 1000 / 1e12, )
-
-        self.roll = RotationMotor(upperLim=np.deg2rad(360),
-                                  lowerLim=-np.deg2rad(360),
-                                  res=1e-6,
-                                  backlash=np.deg2rad(-0.005),
-                                  speed_rad_per_ps=0.01 / 1e12, )
-
-        self.pi = RotationMotor(upperLim=np.deg2rad(5),
-                                lowerLim=-np.deg2rad(5),
-                                res=1e-6,
-                                backlash=np.deg2rad(-0.005),
-                                speed_rad_per_ps=0.1 / 1e12, )
-
+        (self.roll, self.yaw) = get_motors_with_model_for_axis(model='SA05A-R2S01')
+        self.adaptor4 = AdaptorPlate(height=50e3, dimension=[20e3, 20e3])
         self.optics = crystal
 
-        self.all_mostors = [self.x, self.y, self.z, self.roll, self.pi]
-        self.all_mostors_and_optics = [self.x, self.y, self.z, self.roll, self.pi, self.optics]
+        # Install the crystal on the top of the first adaptor
+        self.optics.shift(displacement=self.adaptor4.top_mount_pos - self.optics.surface_point)
+        self.all_obj = [self.adaptor4, self.optics]
+        self.all_obj = install_motors_on_motor_or_adaptors(motor_tower=self.all_obj, motor_or_adaptor=self.yaw)
+        self.all_obj = install_motors_on_motor_or_adaptors(motor_tower=self.all_obj, motor_or_adaptor=self.roll)
 
-        # ------------------------------------------
-        # Change the motor configuration
-        # ------------------------------------------
-        self.z.motion_dir = np.zeros(3, dtype=np.float64)
-        self.z.motion_dir[2] = 1.0  #
-        # Define the installation location of the x stage
-        x_stage_center = np.zeros(3, dtype=np.float64)
-        self.z.shift(displacement=x_stage_center)
+        # Rotate around the x axis such that it matches the angle
+        rot_mat = np.array([[np.cos(tilt_angle3), 0, np.sin(tilt_angle3)],
+                            [0, 1, 0],
+                            [-np.sin(tilt_angle3), 0, np.cos(tilt_angle3)]])
+        for item in self.all_obj:
+            item.rotate_wrt_point(rot_mat=rot_mat, ref_point=self.roll.bottom_mount_pos)
 
-        self.x.motion_dir = np.zeros(3, dtype=np.float64)
-        self.x.motion_dir[1] = 1.0  #
-        # Define the installation location of the x stage
-        x_stage_center = np.zeros(3, dtype=np.float64)
-        self.x.shift(displacement=x_stage_center)
+        # Install the setup on adaptor 3
+        self.all_obj = install_motors_on_motor_or_adaptors(motor_tower=self.all_obj, motor_or_adaptor=self.adaptor3)
 
-        self.y.motion_dir = np.zeros(3, dtype=np.float64)
-        self.y.motion_dir[0] = 1.0  #
-        # Define the installation location of the x stage
-        y_stage_center = np.zeros(3, dtype=np.float64)
-        y_stage_center[0] = 30 * 1000  # The height of the x stage.
-        self.y.shift(displacement=y_stage_center)
+        # Rotate everything around the z axis by 180 deg
+        rot_mat = np.eye(3)
+        rot_mat[0, 0] = -1
+        rot_mat[1, 1] = -1
+        for item in self.all_obj:
+            item.rotate_wrt_point(rot_mat=rot_mat, ref_point=self.adaptor3.bottom_mount_pos)
 
-        self.roll.deg0direction = np.zeros(3, dtype=np.float64)
-        self.roll.deg0direction[1] = 1.0  #
-        self.roll.rotation_axis = np.zeros(3, dtype=np.float64)
-        self.roll.rotation_axis[0] = 1.0
-        self.roll.rotation_center = np.zeros(3, dtype=np.float64)
-
-        # Define the installation location of the x stage
-        roll_stage_center = np.zeros(3, dtype=np.float64)
-        roll_stage_center[0] = 30 * 1000 + 20 * 1000  # The height of the x stage + the height of the y stage
-        self.roll.shift(displacement=roll_stage_center)
-
-        self.pi.deg0direction = np.zeros(3, dtype=np.float64)
-        self.pi.deg0direction[0] = 1.0  #
-        self.pi.rotation_axis = np.zeros(3, dtype=np.float64)
-        self.pi.rotation_axis[1] = 1.0
-        self.pi.rotation_center = np.zeros(3, dtype=np.float64)
-        self.pi.rotation_center[0] = 70e3  # The rotation center of the chi stage is high in the air.
-
-        # Define the installation location of the x stage
-        pi_stage_center = np.zeros(3, dtype=np.float64)
-        pi_stage_center[0] = 30 * 1000 + 20 * 1000 + 30e3  # The height of the x stage + the height of the y stage
-        # + the height of the theta stage
-        self.pi.shift(displacement=pi_stage_center)
-
-        # Move the crystal such that the
-        crystalSurface = np.zeros(3, dtype=np.float64)
-        crystalSurface[0] = 30 * 1000 + 20 * 1000 + 30e3 + 20e3
-        crystalSurface += crystal_loc
-        self.optics.shift(displacement=crystalSurface)
+        # Install the other components
+        self.all_obj = install_motors_on_motor_or_adaptors(motor_tower=self.all_obj, motor_or_adaptor=self.adaptor2)
+        self.all_obj = install_motors_on_motor_or_adaptors(motor_tower=self.all_obj, motor_or_adaptor=self.x)
+        self.all_obj = install_motors_on_motor_or_adaptors(motor_tower=self.all_obj, motor_or_adaptor=self.z)
+        self.all_obj = install_motors_on_motor_or_adaptors(motor_tower=self.all_obj, motor_or_adaptor=self.y)
+        self.all_obj = install_motors_on_motor_or_adaptors(motor_tower=self.all_obj, motor_or_adaptor=self.adaptor1)
 
     def y_umv(self, target):
-        """
-        If one moves the x stage, then one moves the
-        y stage, theta stage, chi stage, crystal
-        together with it.
+        motion_time, displacement = self.y.user_move_abs(target=target, getMotionTime=True)
+        for item in self.all_obj[2:]:
+            item.shift(displacement=displacement)
+        return motion_time
 
-        :param target:
-        :return:
-        """
-
-        # Get the displacement vector for the motion
-        displacement = self.y.motion_dir * (target - self.y.control_location)
-
-        # Shift all the motors and crystals with it
-        motion_time = self.y.user_move_abs(target=target, getMotionTime=True)
-        self.x.shift(displacement=displacement, include_boundary=True)
-        self.z.shift(displacement=displacement, include_boundary=True)
-        self.roll.shift(displacement=displacement, include_boundary=True)
-        self.pi.shift(displacement=displacement, include_boundary=True)
-        self.optics.shift(displacement=displacement, include_boundary=True)
+    def z_umv(self, target):
+        motion_time, displacement = self.z.user_move_abs(target=target, getMotionTime=True)
+        for item in self.all_obj[3:]:
+            item.shift(displacement=displacement)
+        return motion_time
 
     def x_umv(self, target):
-        # Get the displacement vector for the motion
-        displacement = self.x.motion_dir * (target - self.x.control_location)
-
-        # Shift all the motors and crystals with it
-        motion_time = self.x.user_move_abs(target=target, getMotionTime=True)
-        self.z.shift(displacement=displacement, include_boundary=True)
-        self.roll.shift(displacement=displacement, include_boundary=True)
-        self.pi.shift(displacement=displacement, include_boundary=True)
-        self.optics.shift(displacement=displacement, include_boundary=True)
+        motion_time, displacement = self.x.user_move_abs(target=target, getMotionTime=True)
+        for item in self.all_obj[4:]:
+            item.shift(displacement=displacement)
+        return motion_time
 
     def roll_umv(self, target):
-        # Get the displacement vector for the motion
-        displacement = (target - self.roll.control_location)
+        motion_time, rotMat = self.roll.user_move_abs(target=target, getMotionTime=True)
+        for item in self.all_obj[7:]:
+            item.rotate_wrt_point(rot_mat=rotMat, ref_point=self.roll.rotation_center)
+        return motion_time
 
-        # Get the rotation matrix for the stages above the rotation stage
-        rotMat = util.get_rotmat_around_axis(angleRadian=displacement, axis=self.roll.rotation_axis)
-
-        # Shift all the motors and crystals with it
-        motion_time = self.roll.user_move_abs(target=target, getMotionTime=True)
-        self.pi.rotate_wrt_point(rot_mat=rotMat, ref_point=self.roll.rotation_center, include_boundary=True)
-        self.optics.rotate_wrt_point(rot_mat=rotMat, ref_point=self.roll.rotation_center,
-                                     include_boundary=True)
-
-    def pi_umv(self, target):
-        # Get the displacement vector for the motion
-        displacement = (target - self.pi.control_location)
-
-        # Get the rotation matrix for the stages above the rotation stage
-        rotMat = util.get_rotmat_around_axis(angleRadian=displacement, axis=self.pi.rotation_axis)
-
-        # Shift all the motors and crystals with it
-        motion_time = self.pi.user_move_abs(target=target, getMotionTime=True)
-        self.optics.rotate_wrt_point(rot_mat=rotMat, ref_point=self.pi.rotation_center, include_boundary=True)
+    def yaw_umv(self, target):
+        motion_time, rotMat = self.yaw.user_move_abs(target=target, getMotionTime=True)
+        for item in self.all_obj[8:]:
+            item.rotate_wrt_point(rot_mat=rotMat, ref_point=self.yaw.rotation_center)
+        return motion_time
 
 
 class TG_Sample_tower:
-    """
-    This class is probability only useful for the TG experiment.
-    Therefore, when initializing this class, I do not allow for an arbitrary crystal location
-    since there is almost no possibility of using this for a new application.
-    """
-
-    def __init__(self,
-                 sample,
-                 yag_sample,
-                 yag1, yag2, yag3, ):
-        # Create the instance of each motors
-
+    def __init__(self, sample, yag_sample, yag1, yag2, yag3, ):
         self.x = xyMotor(upperLim=12.5 * 1000,
                          lowerLim=-12.5 * 1000,
                          res=5,
                          backlash=100,
                          speed_um_per_ps=1 * 1000 / 1e12, )
-
         self.y = xyMotor(upperLim=12.5 * 1000,
                          lowerLim=-12.5 * 1000,
                          res=5,
                          backlash=100,
                          speed_um_per_ps=1 * 1000 / 1e12, )
-
         self.z = xyMotor(upperLim=12.5 * 1000,
                          lowerLim=-12.5 * 1000,
                          res=5,
                          backlash=100,
                          speed_um_per_ps=1 * 1000 / 1e12, )
-
         self.th = RotationMotor(upperLim=np.deg2rad(360),
                                 lowerLim=-np.deg2rad(360),
                                 res=1e-6,
                                 backlash=np.deg2rad(-0.005),
                                 speed_rad_per_ps=0.01 / 1e12, )
-
         self.sample = sample
         self.yag_sample = yag_sample
         self.yag1 = yag1
