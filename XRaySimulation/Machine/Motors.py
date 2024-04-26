@@ -866,6 +866,35 @@ def get_motors_with_model_for_axis(model, rot_center_height=70e3, color='k', axi
                                        ref_point=np.copy(motor_obj.bottom_mount_pos))
             pass
 
+    elif model == "UTS100CC":
+        print("Create a {} motor, moving along x axis.".format(model))
+        motor_obj = xyMotor(upperLim=50 * 1000,
+                            lowerLim=-50 * 1000,
+                            res=2,
+                            backlash=100,
+                            speed_um_per_ps=2 * 1000 / 1e12,
+                            dimension=[100e3, 100e3],
+                            height=32e3,
+                            color=color)
+        if axis == 'x':
+            pass
+        elif axis == 'y':
+            rot_mat = np.array([[0, -1, 0],
+                                [1, 0, 0],
+                                [0, 0, 1]])
+            rot_mat = np.dot(rot_mat, np.array([[0, 0, 1],
+                                                [0, 1, 0],
+                                                [-1, 0, 0]]))
+            motor_obj.rotate_wrt_point(rot_mat=rot_mat,
+                                       ref_point=np.copy(motor_obj.bottom_mount_pos))
+
+        elif axis == "z":
+            rot_mat = np.array([[1, 0, 0],
+                                [0, 0, -1],
+                                [0, 1, 0]])
+            motor_obj.rotate_wrt_point(rot_mat=rot_mat,
+                                       ref_point=np.copy(motor_obj.bottom_mount_pos))
+
     elif model == "XA10A-L101":
         print("Create a XA10A motor, moving along x axis.")
         motor_obj = xyMotor(upperLim=50 * 1000,
@@ -1546,143 +1575,82 @@ class Silicon_tower:
 
 class TG_Sample_tower:
     def __init__(self, sample, yag_sample, yag1, yag2, yag3, ):
-        self.x = xyMotor(upperLim=12.5 * 1000,
-                         lowerLim=-12.5 * 1000,
-                         res=5,
-                         backlash=100,
-                         speed_um_per_ps=1 * 1000 / 1e12, )
-        self.y = xyMotor(upperLim=12.5 * 1000,
-                         lowerLim=-12.5 * 1000,
-                         res=5,
-                         backlash=100,
-                         speed_um_per_ps=1 * 1000 / 1e12, )
-        self.z = xyMotor(upperLim=12.5 * 1000,
-                         lowerLim=-12.5 * 1000,
-                         res=5,
-                         backlash=100,
-                         speed_um_per_ps=1 * 1000 / 1e12, )
-        self.th = RotationMotor(upperLim=np.deg2rad(360),
-                                lowerLim=-np.deg2rad(360),
-                                res=1e-6,
-                                backlash=np.deg2rad(-0.005),
-                                speed_rad_per_ps=0.01 / 1e12, )
+
+        # Create the instance of each motors and adaptors
+        self.adaptor1 = AdaptorPlate(height=10e3, dimension=[100e3, 100e3])
+        self.x = get_motors_with_model_for_axis(model="UTS100CC")
+        self.adaptor2 = AdaptorPlate(height=24.3e3, dimension=[100e3, 100e3])
+        self.y = get_motors_with_model_for_axis(model="ZA10A")
+        self.z = get_motors_with_model_for_axis(model="XA10A", axis='z')
+        self.adaptor3 = AdaptorPlate(height=30e3, dimension=[100e3, 100e3])
+        self.adaptor4 = L_Bracket(height=35e3, dimension=[50e3, 50e3])
+        self.th = get_motors_with_model_for_axis(model="RA05A", axis='x')
+        self.adaptor5 = AdaptorPlate(height=72.7e3, dimension=[10e3, 10e3])
+
         self.sample = sample
         self.yag_sample = yag_sample
         self.yag1 = yag1
         self.yag2 = yag2
         self.yag3 = yag3
 
-        # ------------------------------------------
-        # Change the motor configuration
-        # ------------------------------------------
-        self.x.motion_dir = np.zeros(3, dtype=np.float64)
-        self.x.motion_dir[1] = 1.0  #
-        # Define the installation location of the x stage
-        x_stage_center = np.zeros(3, dtype=np.float64)
-        self.x.shift(displacement=x_stage_center)
+        # Install sample and sample_yag on the adaptor 5
+        displacement = self.adaptor5.top_mount_pos - self.sample.surface_point
+        self.sample.shift(displacement=displacement)
 
-        self.y.motion_dir = np.zeros(3, dtype=np.float64)
-        self.y.motion_dir[0] = 1.0  #
-        # Define the installation location of the x stage
-        y_stage_center = np.zeros(3, dtype=np.float64)
-        y_stage_center[0] = 30 * 1000  # The height of the x stage.
-        self.y.shift(displacement=y_stage_center)
+        rot_mat = util.get_rotmat_around_axis(angleRadian=np.pi / 2, axis=np.array([0, 1, 0]))
+        self.yag_sample.rotate_wrt_point(rot_mat=rot_mat, ref_point=np.copy(self.yag_sample.surface_point))
+        displacement = self.adaptor5.top_mount_pos + np.array([10e3, 0, 0]) - self.yag_sample.surface_point
+        self.yag_sample.shift(displacement=displacement)
 
-        self.z.motion_dir = np.zeros(3, dtype=np.float64)
-        self.z.motion_dir[0] = 1.0  #
-        # Define the installation location of the x stage
-        z_stage_center = np.zeros(3, dtype=np.float64)
-        z_stage_center[0] = 30 * 1000  # The height of the x stage.
-        self.z.shift(displacement=z_stage_center)
+        # Assemble the small sample tower
+        self.all_obj = [self.adaptor5, self.yag_sample, self.sample]
+        rot_mat = util.get_rotmat_around_axis(angleRadian=np.pi / 2, axis=np.array([0, 0, 1]))
+        for item in self.all_obj:
+            item.rotate_wrt_point(rot_mat=rot_mat, ref_point=np.copy(self.adaptor5.bottom_mount_pos))
+        self.all_obj = install_motors_on_motor_or_adaptors(self.all_obj, self.th)
+        self.all_obj = install_motors_on_motor_or_adaptors(self.all_obj, self.adaptor4)
 
-        self.th.deg0direction = np.zeros(3, dtype=np.float64)
-        self.th.deg0direction[1] = 1.0  #
-        self.th.rotation_axis = np.zeros(3, dtype=np.float64)
-        self.th.rotation_axis[0] = 1.0
-        self.th.rotation_center = np.zeros(3, dtype=np.float64)
+        rot_mat = util.get_rotmat_around_axis(angleRadian=np.deg2rad(5), axis=np.array([0, 1, 0]))
+        for item in self.all_obj:
+            item.rotate_wrt_point(rot_mat=rot_mat, ref_point=np.copy(self.adaptor4.bottom_mount_pos))
 
-        # Define the installation location of the x stage
-        th_stage_center = np.zeros(3, dtype=np.float64)
-        th_stage_center[0] = 30 * 1000 + 20 * 1000  # The height of the x stage + the height of the y stage
-        self.th.shift(displacement=th_stage_center)
+        # Assemble the small sample tower to the big sample and yag tower
+        self.yag1.shift(displacement=np.array([35.7e3, 67.5e3, -70.35e3]) + self.adaptor3.top_mount_pos)
+        self.yag2.shift(displacement=np.array([45.7e3, 67.5e3, -70.35e3]) + self.adaptor3.top_mount_pos)
+        self.yag2.shift(displacement=np.array([45.7e3, 77.5e3, -70.35e3]) + self.adaptor3.top_mount_pos)
 
-        # Move the crystal such that the
-        sampleSurface = np.zeros(3, dtype=np.float64)
-        sampleSurface[0] = 30 * 1000 + 20 * 1000 + 30e3 + 20e3
-        self.sample.shift(displacement=sampleSurface)
+        displacement = np.array([0, 67.5e3, -70.35e3]) + self.adaptor3.top_mount_pos
+        for item in self.all_obj:
+            item.shift(displacement=displacement)
+        self.all_obj = [self.adaptor3, self.yag1, self.yag2, self.yag3] + self.all_obj
 
-        yag_sample_location = np.zeros(3)
-        self.yag_sample.shift(displacement=yag_sample_location)
-
-        yag1_location = np.zeros(3)
-        self.yag1.shift(displacement=yag1_location)
-        yag2_location = np.zeros(3)
-        self.yag2.shift(displacement=yag2_location)
-        yag3_location = np.zeros(3)
-        self.yag3.shift(displacement=yag3_location)
-
-        # Define the color for the device visualization
-        self.color_list = ['red', 'brown', 'yellow', 'purple', 'black']
+        self.all_obj = install_motors_on_motor_or_adaptors(motor_tower=self.all_obj, motor_or_adaptor=self.z)
+        self.all_obj = install_motors_on_motor_or_adaptors(motor_tower=self.all_obj, motor_or_adaptor=self.y)
+        self.all_obj = install_motors_on_motor_or_adaptors(motor_tower=self.all_obj, motor_or_adaptor=self.adaptor2)
+        self.all_obj = install_motors_on_motor_or_adaptors(motor_tower=self.all_obj, motor_or_adaptor=self.x)
+        self.all_obj = install_motors_on_motor_or_adaptors(motor_tower=self.all_obj, motor_or_adaptor=self.adaptor1)
 
     def x_umv(self, target):
-        """
-        If one moves the x stage, then one moves the
-        y stage, theta stage, chi stage, crystal
-        together with it.
-
-        :param target:
-        :return:
-        """
-
-        # Get the displacement vector for the motion
-        displacement = self.x.motion_dir * (target - self.x.control_location)
-
-        # Shift all the motors and crystals with it
-        motion_time = self.x.user_move_abs(target=target, getMotionTime=True)
-        self.y.shift(displacement=displacement, include_boundary=True)
-        self.z.shift(displacement=displacement, include_boundary=True)
-        self.th.shift(displacement=displacement, include_boundary=True)
-        self.sample.shift(displacement=displacement, include_boundary=True)
-        self.yag_sample.shift(displacement=displacement, include_boundary=True)
-        self.yag1.shift(displacement=displacement, include_boundary=True)
-        self.yag2.shift(displacement=displacement, include_boundary=True)
-        self.yag3.shift(displacement=displacement, include_boundary=True)
+        motion_time, displacement = self.x.user_move_abs(target=target)
+        for item in self.all_obj[2:]:
+            item.shift(displacement=displacement)
+        return motion_time
 
     def y_umv(self, target):
-        # Get the displacement vector for the motion
-        displacement = self.y.motion_dir * (target - self.y.control_location)
-
-        # Shift all the motors and crystals with it
-        motion_time = self.y.user_move_abs(target=target, getMotionTime=True)
-        self.z.shift(displacement=displacement, include_boundary=True)
-        self.th.shift(displacement=displacement, include_boundary=True)
-        self.sample.shift(displacement=displacement, include_boundary=True)
-        self.yag_sample.shift(displacement=displacement, include_boundary=True)
-        self.yag1.shift(displacement=displacement, include_boundary=True)
-        self.yag2.shift(displacement=displacement, include_boundary=True)
-        self.yag3.shift(displacement=displacement, include_boundary=True)
+        motion_time, displacement = self.y.user_move_abs(target=target)
+        for item in self.all_obj[4:]:
+            item.shift(displacement=displacement)
+        return motion_time
 
     def z_umv(self, target):
-        # Get the displacement vector for the motion
-        displacement = self.z.motion_dir * (target - self.z.control_location)
-
-        # Shift all the motors and crystals with it
-        motion_time = self.z.user_move_abs(target=target, getMotionTime=True)
-        self.th.shift(displacement=displacement, include_boundary=True)
-        self.sample.shift(displacement=displacement, include_boundary=True)
-        self.yag_sample.shift(displacement=displacement, include_boundary=True)
-        self.yag1.shift(displacement=displacement, include_boundary=True)
-        self.yag2.shift(displacement=displacement, include_boundary=True)
-        self.yag3.shift(displacement=displacement, include_boundary=True)
+        motion_time, displacement = self.z.user_move_abs(target=target, getMotionTime=True)
+        for item in self.all_obj[4:]:
+            item.shift(displacement=displacement)
+        return motion_time
 
     def th_umv(self, target):
-        # Get the displacement vector for the motion
-        displacement = (target - self.th.control_location)
-
-        # Get the rotation matrix for the stages above the rotation stage
-        rotMat = util.get_rotmat_around_axis(angleRadian=displacement, axis=self.th.rotation_axis)
-
         # Shift all the motors and crystals with it
-        motion_time = self.th.user_move_abs(target=target, getMotionTime=True)
-        self.sample.shift(displacement=displacement, include_boundary=True)
-        self.yag_sample.shift(displacement=displacement, include_boundary=True)
+        motion_time, rotMat = self.th.user_move_abs(target=target, getMotionTime=True)
+        for item in self.all_obj[11:]:
+            item.rotate_wrt_point(rot_mat=rotMat, ref_point=np.copy(self.th.rotation_center))
+        return motion_time
