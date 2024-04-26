@@ -177,7 +177,7 @@ class GenOut(object):
 
 
 # class GenCompressedOut(object):
-#  def __init__(self, genout_object):
+#  def __init__(controller, genout_object):
 
 
 def compare_slice_power(first_file, second_file):

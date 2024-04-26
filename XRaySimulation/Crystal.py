@@ -68,6 +68,9 @@ class ChannelCut:
         # The location of the first crystal determines which direction should the channel-cut rotate
         self.first_crystal_loc = first_surface_loc
 
+        # Rotation center
+        self.ideal_rot_center = np.zeros(3)  # A quantity designed to facilitate the installtion on adaptors
+
         if source == "x-server":
             # Get the atomic plane distance.
             crystal_property = get_crystal_param(crystal_type=crystal_type,
@@ -99,11 +102,13 @@ class ChannelCut:
                            edge_length=edge_length_list[x]) for x in range(2)]
 
         # Shift and rotate crystals to the correct position
+        # Currently, we shift the crystals, such that the surface point of the
+        # first crystal is always at np.zeros(0,0,0)
         if first_surface_loc == "lower left":
             displacement = np.array([0, gap, surface_center_offset])
 
             # Shift the surface center
-            self.crystal_list[1].shift(displacement=displacement, include_boundary=True)
+            self.crystal_list[1].shift(displacement=displacement)
 
             # Rotate the crystal
             rot_mat = np.array([[1., 0., 0., ],
@@ -111,8 +116,7 @@ class ChannelCut:
                                 [0., 0., -1., ],
                                 ], dtype=np.float64)
             self.crystal_list[1].rotate_wrt_point(rot_mat=rot_mat,
-                                                  ref_point=np.copy(self.crystal_list[1].surface_point),
-                                                  include_boundary=True)
+                                                  ref_point=np.copy(self.crystal_list[1].surface_point))
         elif first_surface_loc == "upper left":
             # Rotate the first crystal
             rot_mat = np.array([[1., 0., 0., ],
@@ -120,28 +124,27 @@ class ChannelCut:
                                 [0., 0., -1., ],
                                 ], dtype=np.float64)
             self.crystal_list[0].rotate_wrt_point(rot_mat=rot_mat,
-                                                  ref_point=np.copy(self.crystal_list[0].surface_point),
-                                                  include_boundary=True)
+                                                  ref_point=np.copy(self.crystal_list[0].surface_point))
 
             # Shift the second crystal
             displacement = np.array([0, -gap, surface_center_offset])
 
             # Shift the surface center
-            self.crystal_list[1].shift(displacement=displacement, include_boundary=True)
+            self.crystal_list[1].shift(displacement=displacement)
         else:
             print("The first_surface_loc has to be lower left or upper left")
 
-    def shift(self, displacement, include_boundary=True):
+    def shift(self, displacement):
         for x in range(2):
-            self.crystal_list[x].shift(displacement=displacement,
-                                       include_boundary=include_boundary)
+            self.crystal_list[x].shift(displacement=displacement)
+        self.ideal_rot_center += displacement
 
-    def rotate(self, rot_mat, include_boundary=True):
+    def rotate(self, rot_mat):
         for x in range(2):
-            self.crystal_list[x].rotate(rot_mat=rot_mat,
-                                        include_boundary=include_boundary)
+            self.crystal_list[x].rotate(rot_mat=rot_mat)
+        self.ideal_rot_center = np.dot(rot_mat, self.ideal_rot_center)
 
-    def rotate_wrt_point(self, rot_mat, ref_point, include_boundary=True):
+    def rotate_wrt_point(self, rot_mat, ref_point):
         """
         This is a function designed
         :param rot_mat:
@@ -151,8 +154,7 @@ class ChannelCut:
         """
         for x in range(2):
             self.crystal_list[x].rotate_wrt_point(rot_mat=rot_mat,
-                                                  ref_point=np.copy(ref_point),
-                                                  include_boundary=include_boundary)
+                                                  ref_point=np.copy(ref_point))
 
 
 class CrystalBlock3D:
@@ -223,13 +225,20 @@ class CrystalBlock3D:
         #############################
         #      The boundary is defined in the following way
         #
-        #    (top, left) point 0        (middle perpendicular to self.normal) self.surface_point      point 1
+        #    (top, left) point 0        (middle perpendicular to controller.normal) controller.surface_point      point 1
         #      parallel to h
         #       point 3                                                                               point 2
         #
 
         # direction perpendicular to the normal direction
-        direction1 = np.cross(np.array([1, 0, 0]), self.normal)
+        # Check if the normal direction is along the y axis of XPP
+        direction1 = np.cross(np.array([1, 0, 0], dtype=np.float64), self.normal)
+        if np.linalg.norm(direction1) < 1e-6:
+            # Try another direction
+            direction1 = np.cross(np.array([0, 1, 0], dtype=np.float64), self.normal)
+            if np.linalg.norm(direction1) < 1e-6:
+                direction1 = np.cross(np.array([0, 0, 1], dtype=np.float64), self.normal)
+
         direction1 /= np.linalg.norm(direction1)
 
         # direction parallel to the reciprocal lattice
@@ -283,7 +292,7 @@ class CrystalBlock3D:
         self.h_square = self.h[0] ** 2 + self.h[1] ** 2 + self.h[2] ** 2
         self.h_len = np.sqrt(self.h_square)
 
-    def shift(self, displacement, include_boundary=True):
+    def shift(self, displacement):
         """
 
         :param displacement:
@@ -291,9 +300,7 @@ class CrystalBlock3D:
         :return:
         """
         self.surface_point += displacement
-
-        if include_boundary:
-            self.boundary += displacement[np.newaxis, :]
+        self.boundary += displacement[np.newaxis, :]
 
     def rotate(self, rot_mat, include_boundary=True):
         # The shift of the space does not change the reciprocal lattice and the normal direction
@@ -301,14 +308,13 @@ class CrystalBlock3D:
         self.normal = np.ascontiguousarray(rot_mat.dot(self.normal))
         self.surface_point = np.asanyarray(np.dot(rot_mat, self.surface_point))
 
-        if include_boundary:
-            self.boundary = np.asanyarray(np.dot(self.boundary, rot_mat.T))
+        self.boundary = np.asanyarray(np.dot(self.boundary, rot_mat.T))
 
     ##############################################
     #   This is a methods designed for the simulation of the light path
     #   to investigate whether the crystal will block hte light or not.
     ##############################################
-    def rotate_wrt_point(self, rot_mat, ref_point, include_boundary=True):
+    def rotate_wrt_point(self, rot_mat, ref_point):
         """
         This is a function designed
         :param rot_mat:
@@ -318,13 +324,13 @@ class CrystalBlock3D:
         """
         tmp = np.copy(ref_point)
         # Step 1: shift with respect to that point
-        self.shift(displacement=-np.copy(tmp), include_boundary=include_boundary)
+        self.shift(displacement=-np.copy(tmp))
 
         # Step 2: rotate the quantities
-        self.rotate(rot_mat=rot_mat, include_boundary=include_boundary)
+        self.rotate(rot_mat=rot_mat)
 
         # Step 3: shift it back to the reference point
-        self.shift(displacement=np.copy(tmp), include_boundary=include_boundary)
+        self.shift(displacement=np.copy(tmp))
 
 
 class CrystalBlock3D_auto:
@@ -399,7 +405,7 @@ class CrystalBlock3D_auto:
         #############################
         #      The boundary is defined in the following way
         #
-        #    (top, left) point 0        (middle perpendicular to self.normal) self.surface_point      point 1
+        #    (top, left) point 0        (middle perpendicular to controller.normal) controller.surface_point      point 1
         #      parallel to h
         #       point 3                                                                               point 2
         #
@@ -553,6 +559,12 @@ class RectangleGrating:
         self.order = order
         self.momentum_transfer = self.order * self.base_wave_vector
 
+        self.boundary = np.array([[-5e3, -5e3, 0],
+                                  [-5e3, 5e3, 0],
+                                  [5e3, 5e3, 0],
+                                  [5e3, -5e3, 0],
+                                  [-5e3, -5e3, 0], ])
+
     def __update_period_wave_vector(self):
         self.period = self.a + self.b  # (um)
         self.base_wave_vector = self.direction * np.pi * 2. / self.period
@@ -588,11 +600,13 @@ class RectangleGrating:
 
     def shift(self, displacement):
         self.surface_point += displacement
+        self.boundary += displacement[np.newaxis, :]
 
     def rotate(self, rot_mat):
         # The shift of the space does not change the reciprocal lattice and the normal direction
         self.direction = np.ascontiguousarray(rot_mat.dot(self.direction))
         self.normal = np.ascontiguousarray(rot_mat.dot(self.normal))
+        self.boundary = np.asanyarray(np.dot(self.boundary, rot_mat.T))
 
         # Update h and wave vector
         self.__update_h()
@@ -655,11 +669,11 @@ class YAG:
         self.type = "YAG"
 
         if dimension is None:
-            dimension = [1000, 1000]
+            dimension = [10000, 10000]
 
         # Geometry info
-        self.surface_point = surface_point
-        self.normal = normal
+        self.surface_point = np.copy(surface_point)
+        self.normal = np.copy(normal)
 
         self.boundary = np.array([np.array([-dimension[0] / 2, -dimension[1] / 2, 0, ]),
                                   np.array([-dimension[0] / 2, dimension[1] / 2, 0, ]),
@@ -668,21 +682,17 @@ class YAG:
                                   np.array([-dimension[0] / 2, -dimension[1] / 2, 0, ]),
                                   ])
 
-    def shift(self, displacement, include_boundary=True):
-        self.surface_point += displacement
+    def shift(self, displacement):
+        self.surface_point += np.copy(displacement)
+        self.boundary += np.copy(displacement[np.newaxis, :])
 
-        if include_boundary:
-            self.boundary += displacement[np.newaxis, :]
-
-    def rotate(self, rot_mat, include_boundary=True):
+    def rotate(self, rot_mat):
         # The shift of the space does not change the reciprocal lattice and the normal direction
         self.normal = np.ascontiguousarray(rot_mat.dot(self.normal))
         self.surface_point = np.asanyarray(np.dot(rot_mat, self.surface_point))
+        self.boundary = np.asanyarray(np.dot(self.boundary, rot_mat.T))
 
-        if include_boundary:
-            self.boundary = np.asanyarray(np.dot(self.boundary, rot_mat.T))
-
-    def rotate_wrt_point(self, rot_mat, ref_point, include_boundary=True):
+    def rotate_wrt_point(self, rot_mat, ref_point):
         """
         This is a function designed
         :param rot_mat:
@@ -692,13 +702,13 @@ class YAG:
         """
         tmp = np.copy(ref_point)
         # Step 1: shift with respect to that point
-        self.shift(displacement=-np.copy(tmp), include_boundary=include_boundary)
+        self.shift(displacement=-np.copy(tmp))
 
         # Step 2: rotate the quantities
-        self.rotate(rot_mat=rot_mat, include_boundary=include_boundary)
+        self.rotate(rot_mat=rot_mat)
 
         # Step 3: shift it back to the reference point
-        self.shift(displacement=np.copy(tmp), include_boundary=include_boundary)
+        self.shift(displacement=np.copy(tmp))
 
 
 class TotalReflectionMirror:
@@ -716,6 +726,12 @@ class TotalReflectionMirror:
         self.normal = normal
         self.normal /= np.linalg.norm(self.normal)
 
+        self.boundary = np.array([[0, -5e3, -20e3],
+                                  [0, -5e3, 20e3, ],
+                                  [0, 5e3, 20e3, ],
+                                  [0, 5e3, -20e3],
+                                  [0, -5e3, -20e3], ])
+
     def set_surface_point(self, surface_point):
         self.surface_point = surface_point
 
@@ -724,19 +740,14 @@ class TotalReflectionMirror:
 
     def shift(self, displacement):
         self.surface_point += displacement
+        self.boundary += displacement[np.newaxis, :]
 
     def rotate(self, rot_mat):
         # The shift of the space does not change the reciprocal lattice and the normal direction
         self.normal = np.ascontiguousarray(rot_mat.dot(self.normal))
+        self.boundary = np.asanyarray(np.dot(self.boundary, rot_mat.T))
 
-    def rotate_wrt_point(self, rot_mat, ref_point, include_boundary=True):
-        """
-        This is a function designed
-        :param rot_mat:
-        :param ref_point:
-        :param include_boundary:
-        :return:
-        """
+    def rotate_wrt_point(self, rot_mat, ref_point):
         # Step 1: shift with respect to that point
         self.shift(displacement=-ref_point)
 

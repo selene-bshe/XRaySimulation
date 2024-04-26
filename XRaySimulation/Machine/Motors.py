@@ -82,37 +82,38 @@ class xyMotor:
         self.top_mount_dir = np.array([1.0, 0, 0, ])  # the normal direction of the top mounting surface
         self.top_mount_pos = np.array([height, 0, 0, ])  # The center of the top mounting surface
         self.bottom_mount_dir = np.array([1.0, 0, 0, ])  # the normal direction of the top mounting surface
-        self.bottom_mount_pos = np.array([0, 0, 0, ])  # The center of the top mounting surface
+        self.bottom_mount_pos = np.array([0, 0, 0, ], dtype=np.float64)  # The center of the top mounting surface
 
         self.color = color  # For visualization
 
-    def shift(self, displacement, include_boundary=True):
+    def shift(self, displacement):
 
         # Change the linear stage platform center
         self.top_mount_pos += displacement
+        self.bottom_mount_pos += displacement
+        self.boundary += displacement[np.newaxis, :]
 
-        # Change the boundary with the displacement.
-        if include_boundary:
-            self.boundary += displacement[np.newaxis, :]
-
-    def rotate(self, rot_mat, include_boundary=True):
+    def rotate(self, rot_mat):
         # The shift of the space does not change the reciprocal lattice and the normal direction
         self.top_mount_pos = np.ascontiguousarray(rot_mat.dot(self.top_mount_pos))
-        self.motion_dir = np.ascontiguousarray(rot_mat.dot(self.motion_dir))
+        self.bottom_mount_pos = np.ascontiguousarray(rot_mat.dot(self.bottom_mount_pos))
 
-        if include_boundary:
-            self.boundary = np.asanyarray(np.dot(self.boundary, rot_mat.T))
+        self.top_mount_dir = np.ascontiguousarray(rot_mat.dot(self.top_mount_dir))
+        self.bottom_mount_dir = np.ascontiguousarray(rot_mat.dot(self.bottom_mount_dir))
+
+        self.motion_dir = np.ascontiguousarray(rot_mat.dot(self.motion_dir))
+        self.boundary = np.asanyarray(np.dot(self.boundary, rot_mat.T))
 
     def rotate_wrt_point(self, rot_mat, ref_point, include_boundary=True):
         tmp = np.copy(ref_point)
         # Step 1: shift with respect to that point
-        self.shift(displacement=-np.copy(tmp), include_boundary=include_boundary)
+        self.shift(displacement=-np.copy(tmp))
 
         # Step 2: rotate the quantities
-        self.rotate(rot_mat=rot_mat, include_boundary=include_boundary)
+        self.rotate(rot_mat=rot_mat)
 
         # Step 3: shift it back to the reference point
-        self.shift(displacement=np.copy(tmp), include_boundary=include_boundary)
+        self.shift(displacement=np.copy(tmp))
 
     def user_move_abs(self, target):
         # Step 1: check if the target value is within the limit or not
@@ -237,37 +238,38 @@ class zMotor:
         self.top_mount_dir = np.array([1.0, 0, 0, ])  # the normal direction of the top mounting surface
         self.top_mount_pos = np.array([height, 0, 0, ])  # The center of the top mounting surface
         self.bottom_mount_dir = np.array([1.0, 0, 0, ])  # the normal direction of the top mounting surface
-        self.bottom_mount_pos = np.array([0, 0, 0, ])  # The center of the top mounting surface
+        self.bottom_mount_pos = np.array([0, 0, 0, ], dtype=np.float64)  # The center of the top mounting surface
 
         self.color = color  # For visualization
 
-    def shift(self, displacement, include_boundary=True):
+    def shift(self, displacement):
 
         # Change the linear stage platform center
         self.top_mount_pos += displacement
+        self.bottom_mount_pos += displacement
+        self.boundary += displacement[np.newaxis, :]
 
-        # Change the boundary with the displacement.
-        if include_boundary:
-            self.boundary += displacement[np.newaxis, :]
-
-    def rotate(self, rot_mat, include_boundary=True):
+    def rotate(self, rot_mat):
         # The shift of the space does not change the reciprocal lattice and the normal direction
         self.top_mount_pos = np.ascontiguousarray(rot_mat.dot(self.top_mount_pos))
-        self.motion_dir = np.ascontiguousarray(rot_mat.dot(self.motion_dir))
+        self.bottom_mount_pos = np.ascontiguousarray(rot_mat.dot(self.bottom_mount_pos))
 
-        if include_boundary:
-            self.boundary = np.asanyarray(np.dot(self.boundary, rot_mat.T))
+        self.top_mount_dir = np.ascontiguousarray(rot_mat.dot(self.top_mount_dir))
+        self.bottom_mount_dir = np.ascontiguousarray(rot_mat.dot(self.bottom_mount_dir))
+
+        self.motion_dir = np.ascontiguousarray(rot_mat.dot(self.motion_dir))
+        self.boundary = np.asanyarray(np.dot(self.boundary, rot_mat.T))
 
     def rotate_wrt_point(self, rot_mat, ref_point, include_boundary=True):
         tmp = np.copy(ref_point)
         # Step 1: shift with respect to that point
-        self.shift(displacement=-np.copy(tmp), include_boundary=include_boundary)
+        self.shift(displacement=-np.copy(tmp))
 
         # Step 2: rotate the quantities
-        self.rotate(rot_mat=rot_mat, include_boundary=include_boundary)
+        self.rotate(rot_mat=rot_mat)
 
         # Step 3: shift it back to the reference point
-        self.shift(displacement=np.copy(tmp), include_boundary=include_boundary)
+        self.shift(displacement=np.copy(tmp))
 
     def user_move_abs(self, target):
         # Step 1: check if the target value is within the limit or not
@@ -382,7 +384,7 @@ class RotationMotor:
         self.top_mount_dir = np.array([1.0, 0, 0, ])  # the normal direction of the top mounting surface
         self.top_mount_pos = np.array([height, 0, 0, ])  # The center of the top mounting surface
         self.bottom_mount_dir = np.array([1.0, 0, 0, ])  # the normal direction of the top mounting surface
-        self.bottom_mount_pos = np.array([0, 0, 0, ])  # The center of the top mounting surface
+        self.bottom_mount_pos = np.array([0, 0, 0, ], dtype=np.float64)  # The center of the top mounting surface
 
         self.boundary = np.array([np.array([0, -dimension[0] / 2, -dimension[1] / 2]),
                                   np.array([0, -dimension[0] / 2, dimension[1] / 2]),
@@ -392,7 +394,7 @@ class RotationMotor:
                                   ])
         self.color = color
 
-    def shift(self, displacement, include_boundary=True):
+    def shift(self, displacement):
 
         # Change the linear stage platform center
         self.rotation_center += np.copy(displacement)
@@ -400,11 +402,7 @@ class RotationMotor:
         self.bottom_mount_pos += np.copy(displacement)
         self.boundary += displacement[np.newaxis, :]
 
-        # Change the boundary with the displacement.
-        if include_boundary:
-            self.boundary += displacement[np.newaxis, :]
-
-    def rotate(self, rot_mat, include_boundary=True):
+    def rotate(self, rot_mat):
         # The shift of the space does not change the reciprocal lattice and the normal direction
         self.deg0direction = np.ascontiguousarray(rot_mat.dot(self.deg0direction))
         self.rotation_center = np.ascontiguousarray(rot_mat.dot(self.rotation_center))
@@ -415,19 +413,18 @@ class RotationMotor:
         self.bottom_mount_dir = np.dot(rot_mat, self.bottom_mount_dir)
         self.bottom_mount_pos = np.dot(rot_mat, self.bottom_mount_pos)
 
-        if include_boundary:
-            self.boundary = np.asanyarray(np.dot(self.boundary, rot_mat.T))
+        self.boundary = np.asanyarray(np.dot(self.boundary, rot_mat.T))
 
     def rotate_wrt_point(self, rot_mat, ref_point, include_boundary=True):
         tmp = np.copy(ref_point)
         # Step 1: shift with respect to that point
-        self.shift(displacement=-np.copy(tmp), include_boundary=include_boundary)
+        self.shift(displacement=-np.copy(tmp))
 
         # Step 2: rotate the quantities
-        self.rotate(rot_mat=rot_mat, include_boundary=include_boundary)
+        self.rotate(rot_mat=rot_mat)
 
         # Step 3: shift it back to the reference point
-        self.shift(displacement=np.copy(tmp), include_boundary=include_boundary)
+        self.shift(displacement=np.copy(tmp))
 
     def user_move_abs(self, target, getMotionTime=True):
         # Step 1: check if the target value is within the limit or not
@@ -542,7 +539,7 @@ class SwivalMotor:
         self.top_mount_dir = np.array([1.0, 0, 0, ])  # the normal direction of the top mounting surface
         self.top_mount_pos = np.array([height, 0, 0, ])  # The center of the top mounting surface
         self.bottom_mount_dir = np.array([1.0, 0, 0, ])  # the normal direction of the top mounting surface
-        self.bottom_mount_pos = np.array([0, 0, 0, ])  # The center of the top mounting surface
+        self.bottom_mount_pos = np.zeros(3, dtype=np.float64)  # The center of the top mounting surface
 
         self.boundary = np.array([np.array([0, -dimension[0] / 2, -dimension[1] / 2]),
                                   np.array([0, -dimension[0] / 2, dimension[1] / 2]),
@@ -552,7 +549,7 @@ class SwivalMotor:
                                   ])
         self.color = color
 
-    def shift(self, displacement, include_boundary=True):
+    def shift(self, displacement):
 
         # Change the linear stage platform center
         self.rotation_center += np.copy(displacement)
@@ -560,11 +557,7 @@ class SwivalMotor:
         self.bottom_mount_pos += np.copy(displacement)
         self.boundary += displacement[np.newaxis, :]
 
-        # Change the boundary with the displacement.
-        if include_boundary:
-            self.boundary += displacement[np.newaxis, :]
-
-    def rotate(self, rot_mat, include_boundary=True):
+    def rotate(self, rot_mat):
         # The shift of the space does not change the reciprocal lattice and the normal direction
         self.deg0direction = np.ascontiguousarray(rot_mat.dot(self.deg0direction))
         self.rotation_center = np.ascontiguousarray(rot_mat.dot(self.rotation_center))
@@ -574,20 +567,18 @@ class SwivalMotor:
         self.top_mount_pos = np.dot(rot_mat, self.top_mount_pos)
         self.bottom_mount_dir = np.dot(rot_mat, self.bottom_mount_dir)
         self.bottom_mount_pos = np.dot(rot_mat, self.bottom_mount_pos)
-
-        if include_boundary:
-            self.boundary = np.asanyarray(np.dot(self.boundary, rot_mat.T))
+        self.boundary = np.asanyarray(np.dot(self.boundary, rot_mat.T))
 
     def rotate_wrt_point(self, rot_mat, ref_point, include_boundary=True):
         tmp = np.copy(ref_point)
         # Step 1: shift with respect to that point
-        self.shift(displacement=-np.copy(tmp), include_boundary=include_boundary)
+        self.shift(displacement=-np.copy(tmp))
 
         # Step 2: rotate the quantities
-        self.rotate(rot_mat=rot_mat, include_boundary=include_boundary)
+        self.rotate(rot_mat=rot_mat)
 
         # Step 3: shift it back to the reference point
-        self.shift(displacement=np.copy(tmp), include_boundary=include_boundary)
+        self.shift(displacement=np.copy(tmp))
 
     def user_move_abs(self, target, getMotionTime=True):
         # Step 1: check if the target value is within the limit or not
@@ -700,7 +691,7 @@ class AdaptorPlate:
         self.top_mount_pos = np.array([height, 0, 0, ])  # The center of the top mounting surface
 
         self.bottom_mount_dir = np.array([1.0, 0, 0, ])  # the normal direction of the top mounting surface
-        self.bottom_mount_pos = np.array([0, 0, 0, ])  # The center of the top mounting surface
+        self.bottom_mount_pos = np.zeros(3, dtype=np.float64)  # The center of the top mounting surface
 
         self.boundary = np.array([np.array([0, -dimension[0] / 2, -dimension[1] / 2]),
                                   np.array([0, -dimension[0] / 2, dimension[1] / 2]),
@@ -722,7 +713,7 @@ class AdaptorPlate:
         self.bottom_mount_dir = np.dot(rot_mat, self.bottom_mount_dir)
         self.bottom_mount_pos = np.dot(rot_mat, self.bottom_mount_pos)
 
-        self.boundary = np.dot(self.boundary, rot_mat)
+        self.boundary = np.dot(self.boundary, rot_mat.T)
 
     def rotate_wrt_point(self, rot_mat, ref_point, include_boundary=True):
         tmp = np.copy(ref_point)
@@ -745,7 +736,7 @@ class L_Bracket:
         self.top_mount_pos = np.array([height, 0, 0, ])  # The center of the top mounting surface
 
         self.bottom_mount_dir = np.array([1.0, 0, 0, ])  # the normal direction of the top mounting surface
-        self.bottom_mount_pos = np.array([0, 0, 0, ])  # The center of the top mounting surface
+        self.bottom_mount_pos = np.zeros(3)  # The center of the top mounting surface
 
         self.boundary = np.array([np.array([0, -dimension[0] / 2, -dimension[1] / 2]),
                                   np.array([0, -dimension[0] / 2, dimension[1] / 2]),
@@ -781,31 +772,17 @@ class L_Bracket:
         self.shift(displacement=np.copy(tmp))
 
 
-def install_motors_on_motor_or_adaptors(motor_tower, motor_or_adaptor, rot_mat=np.eye(3)):
+def install_motors_on_motor_or_adaptors(motor_tower, motor_or_adaptor):
     """
-    This function tries to solve the challenge of imposing geometric relation
-    between different motors.
-
-    This will not solve all the problems.
-    However, I think it will solve at least some issues.
-
-    Currently, this function tries to install the motor A
-    at the center of the mounting surface of motor B.
-
     :param motor_or_adaptor:
     :param motor_tower:
     :return:
     """
-    # Step 1 rotate the motor tower
-    ref_point = np.copy(motor_tower[0].bottom_mounting_point)
-    for motor in motor_tower:
-        motor.rotate_wrt_point(rot_mat=rot_mat, ref_point=ref_point)
-
     # Step 2 move the motor such that the center of the bottom mounting surface of the first motor is
     # the same as the top mounting surface of the new motor or adaptor.
-    displacement = motor_or_adaptor.top_mount_pos - motor_tower[0].bottom_mount_pos
+    displacement = np.copy(motor_or_adaptor.top_mount_pos - motor_tower[0].bottom_mount_pos)
     for motor in motor_tower:
-        motor.shift(displacement)
+        motor.shift(displacement=displacement)
 
     # Add the new object to the motor-tower
     motor_tower = [motor_or_adaptor, ] + motor_tower
@@ -823,8 +800,8 @@ def install_motors_on_breadboard(motor_stack, breadboard, diag_hole_idx1, diag_h
     :return:
     """
     # Get the location where to install the motor stack
-    position = breadboard.holes_top[diag_hole_idx1[0], diag_hole_idx1[0]]
-    position += breadboard.holes_top[diag_hole_idx2[0], diag_hole_idx2[0]]
+    position = breadboard.holes_top[diag_hole_idx1[0], diag_hole_idx1[1]]
+    position += breadboard.holes_top[diag_hole_idx2[0], diag_hole_idx2[1]]
     position /= 2.
 
     displacement = position - motor_stack[0].bottom_mount_pos
@@ -1123,7 +1100,7 @@ class CrystalTower_x_y_theta_chi:
         self.optics = channelCut
 
         # Create the list of all components in this tower
-        self.optics.shift(displacement=self.adaptor3.top_mount_pos - crystal_loc)
+        self.optics.shift(displacement=self.adaptor3.top_mount_pos - np.copy(crystal_loc))
         self.all_obj = [self.adaptor3, self.optics]
 
         self.all_obj = install_motors_on_motor_or_adaptors(motor_tower=self.all_obj, motor_or_adaptor=self.chi)
@@ -1134,7 +1111,9 @@ class CrystalTower_x_y_theta_chi:
         self.all_obj = install_motors_on_motor_or_adaptors(motor_tower=self.all_obj, motor_or_adaptor=self.adaptor1)
 
         # Define a holder that contains all the motor objects
-        self.all_motor_obj = [self.x, self.y, self.th, self.chi]
+        self.all_motors = [self.x, self.y, self.th, self.chi]
+        self.obj_to_plot = [self.x, self.y, self.th, self.chi, ] + self.optics.crystal_list
+        self.all_optics = self.optics.crystal_list
 
     def x_umv(self, target):
         """
@@ -1170,6 +1149,53 @@ class CrystalTower_x_y_theta_chi:
         motion_time, rotMat = self.chi.user_move_abs(target=target, getMotionTime=True)
         for item in self.all_obj[6:]:
             item.rotate_wrt_point(rot_mat=rotMat, ref_point=self.th.rotation_center)
+        return motion_time
+
+
+class Tower_x_y_pi:
+    def __init__(self, mirror):
+        # Create the instance of each motors and adaptors
+        self.adaptor1 = AdaptorPlate(height=55e3, dimension=[100e3, 100e3])
+        self.x = get_motors_with_model_for_axis(model="XA10A")
+        self.y = get_motors_with_model_for_axis(model="ZA10A")
+        self.adaptor2 = AdaptorPlate(height=10e3, dimension=[70e3, 70e3])
+        self.pi = get_motors_with_model_for_axis(model="SA07A", rot_center_height=70e3, axis="x")
+        self.adaptor3 = AdaptorPlate(height=39e3, dimension=[70e3, 70e3])
+        self.optics = mirror
+
+        # Create the list of all components in this tower
+        self.optics.shift(displacement=self.adaptor3.top_mount_pos - np.copy(mirror.surface_point))
+        self.all_obj = [self.adaptor3, self.optics]
+
+        self.all_obj = install_motors_on_motor_or_adaptors(motor_tower=self.all_obj, motor_or_adaptor=self.pi)
+        self.all_obj = install_motors_on_motor_or_adaptors(motor_tower=self.all_obj, motor_or_adaptor=self.adaptor2)
+        self.all_obj = install_motors_on_motor_or_adaptors(motor_tower=self.all_obj, motor_or_adaptor=self.y)
+        self.all_obj = install_motors_on_motor_or_adaptors(motor_tower=self.all_obj, motor_or_adaptor=self.x)
+        self.all_obj = install_motors_on_motor_or_adaptors(motor_tower=self.all_obj, motor_or_adaptor=self.adaptor1)
+
+        # Define a holder that contains all the motor objects
+        self.all_motors = [self.x, self.y, self.pi]
+        self.obj_to_plot = [self.x, self.y, self.pi, self.optics]
+        self.all_optics = [self.optics, ]
+
+    def x_umv(self, target):
+        motion_time, displacement = self.x.user_move_abs(target=target, getMotionTime=True)
+        for item in self.all_obj[2:]:
+            item.shift(displacement=displacement)
+        return motion_time
+
+    def y_umv(self, target):
+        # Shift all the motors and crystals with it
+        motion_time, displacement = self.y.user_move_abs(target=target, getMotionTime=True)
+        for item in self.all_obj[3:]:
+            item.shift(displacement=displacement)
+        return motion_time
+
+    def pi_umv(self, target):
+        # Shift all the motors and crystals with it
+        motion_time, rotMat = self.pi.user_move_abs(target=target, getMotionTime=True)
+        for item in self.all_obj[5:]:
+            item.rotate_wrt_point(rot_mat=rotMat, ref_point=self.pi.rotation_center)
         return motion_time
 
 
@@ -1210,6 +1236,7 @@ class CrystalTower_miniSD_Scan:
         # Adjust the relative position between the two towers with respect to the adaptor2
         displacement = np.array([0., 0., 89e3]) + self.adaptor2.top_mount_pos - self.tower1[0].bottom_mount_pos
         for item in self.tower1:
+            # print(item)
             item.shift(displacement=displacement)
 
         displacement = np.array([0., 0., -89e3]) + self.adaptor2.top_mount_pos - self.tower2[0].bottom_mount_pos
@@ -1221,7 +1248,10 @@ class CrystalTower_miniSD_Scan:
         self.all_obj = install_motors_on_motor_or_adaptors(motor_tower=self.all_obj, motor_or_adaptor=self.adaptor1)
 
         # Define a holder that contains all the motor objects
-        self.all_motor_obj = [self.delay, self.th1, self.th2, self.chi, self.x]
+        self.all_motors = [self.delay, self.th1, self.th2, self.chi, self.x]
+        self.obj_to_plot = ([self.delay, self.th1, self.th2, self.chi, self.x] +
+                            self.optics1.crystal_list + self.optics2.crystal_list)
+        self.all_optics = self.optics1.crystal_list + self.optics2.crystal_list
 
     def x_umv(self, target):
         motion_time, displacement = self.delay.user_move_abs(target=target, getMotionTime=True)
@@ -1289,15 +1319,18 @@ class Grating_tower:
 
         # Install the two gratings
         displacement = self.adaptor3.top_mount_pos - grating_1.surface_point
-        grating_1.shape(displacement=displacement)
+        grating_1.shift(displacement=displacement)
         displacement = self.adaptor3.top_mount_pos - grating_m1.surface_point
-        grating_m1.shape(displacement=displacement)
+        grating_m1.shift(displacement=displacement)
         self.grating_1 = grating_1
         self.grating_m1 = grating_m1
 
         # Add the gratings to the grating tower
-
         self.all_obj += [self.grating_1, self.grating_m1]
+
+        self.all_motors = [self.x, self.y, self.pi, self.roll, self.yaw]
+        self.obj_to_plot = [self.x, self.y, self.pi, self.roll, self.yaw, self.grating_1]
+        self.all_optics = [self.grating_1, self.grating_m1]
 
     def x_umv(self, target):
         motion_time, displacement = self.x.user_move_abs(target=target, getMotionTime=True)
@@ -1351,11 +1384,11 @@ class Mirror_tower1:
         self.roll = get_motors_with_model_for_axis(model="SA07A", rot_center_height=96e3, axis="z")
         self.adapter3 = L_Bracket(height=10e3, dimension=[70e3, 70e3])
         self.yaw = get_motors_with_model_for_axis(model="SA07A", rot_center_height=70e3, axis="z")
-        self.adapter4 = AdaptorPlate(height=70, dimension=[70e3, 70e3])
+        self.adapter4 = AdaptorPlate(height=70e3, dimension=[70e3, 70e3])
         self.optics = mirror
 
         # Install mirror to the adaptor 4
-        rot_mat = util.get_rotmat_around_axis(angleRadian=np.pi, axis=np.array([0., 0., 1]))
+        rot_mat = util.get_rotmat_around_axis(angleRadian=np.pi/2, axis=np.array([0., 0., 1]))
         self.optics.rotate_wrt_point(rot_mat=rot_mat, ref_point=np.copy(self.optics.surface_point))
         self.adapter4.rotate_wrt_point(rot_mat=rot_mat, ref_point=np.copy(self.adapter4.bottom_mount_pos))
         self.yaw.rotate_wrt_point(rot_mat=rot_mat, ref_point=np.copy(self.yaw.bottom_mount_pos))
@@ -1380,6 +1413,10 @@ class Mirror_tower1:
         self.all_obj = install_motors_on_motor_or_adaptors(motor_tower=self.all_obj, motor_or_adaptor=self.x)
         self.all_obj = install_motors_on_motor_or_adaptors(motor_tower=self.all_obj, motor_or_adaptor=self.z)
         self.all_obj = install_motors_on_motor_or_adaptors(motor_tower=self.all_obj, motor_or_adaptor=self.adapter1)
+
+        self.all_motors = [self.z, self.x, self.roll, self.yaw]
+        self.obj_to_plot = [self.z, self.x, self.roll, self.yaw, self.optics]
+        self.all_optics = [self.optics, ]
 
     def z_umv(self, target):
         motion_time, displacement = self.z.user_move_abs(target=target, getMotionTime=True)
@@ -1427,11 +1464,11 @@ class Mirror_tower2:
         self.roll = get_motors_with_model_for_axis(model="SA07A", rot_center_height=96e3, axis="z")
         self.adapter3 = L_Bracket(height=10e3, dimension=[70e3, 70e3])
         self.yaw = get_motors_with_model_for_axis(model="SA07A", rot_center_height=70e3, axis="z")
-        self.adapter4 = AdaptorPlate(height=70, dimension=[70e3, 70e3])
+        self.adapter4 = AdaptorPlate(height=70e3, dimension=[70e3, 70e3])
         self.optics = mirror
 
         # Install mirror to the adaptor 4
-        rot_mat = util.get_rotmat_around_axis(angleRadian=np.pi, axis=np.array([0., 0., 1]))
+        rot_mat = util.get_rotmat_around_axis(angleRadian=np.pi/2, axis=np.array([0., 0., 1]))
         self.optics.rotate_wrt_point(rot_mat=rot_mat, ref_point=np.copy(self.optics.surface_point))
         self.adapter4.rotate_wrt_point(rot_mat=rot_mat, ref_point=np.copy(self.adapter4.bottom_mount_pos))
         self.yaw.rotate_wrt_point(rot_mat=rot_mat, ref_point=np.copy(self.yaw.bottom_mount_pos))
@@ -1464,6 +1501,10 @@ class Mirror_tower2:
         self.all_obj = install_motors_on_motor_or_adaptors(motor_tower=self.all_obj, motor_or_adaptor=self.x)
         self.all_obj = install_motors_on_motor_or_adaptors(motor_tower=self.all_obj, motor_or_adaptor=self.z)
         self.all_obj = install_motors_on_motor_or_adaptors(motor_tower=self.all_obj, motor_or_adaptor=self.adapter1)
+
+        self.all_motors = [self.z, self.x, self.roll, self.yaw]
+        self.obj_to_plot = [self.z, self.x, self.roll, self.yaw, self.optics]
+        self.all_optics = [self.optics, ]
 
     def z_umv(self, target):
         motion_time, displacement = self.z.user_move_abs(target=target, getMotionTime=True)
@@ -1508,9 +1549,11 @@ class Silicon_tower:
         self.adaptor3.top_mount_dir = np.array([np.cos(np.deg2rad(tilt_angle3)),
                                                 0, np.sin(np.deg2rad(tilt_angle3))])
 
-        (self.roll, self.yaw) = get_motors_with_model_for_axis(model='SA05A-R2S01')
+        (self.roll, self.yaw) = get_motors_with_model_for_axis(model='SA05A-R2S01', axis='y')
         self.adaptor4 = AdaptorPlate(height=50e3, dimension=[20e3, 20e3])
         self.optics = crystal
+        #print(crystal.boundary)
+        #print(crystal.normal)
 
         # Install the crystal on the top of the first adaptor
         self.optics.shift(displacement=self.adaptor4.top_mount_pos - self.optics.surface_point)
@@ -1541,6 +1584,10 @@ class Silicon_tower:
         self.all_obj = install_motors_on_motor_or_adaptors(motor_tower=self.all_obj, motor_or_adaptor=self.z)
         self.all_obj = install_motors_on_motor_or_adaptors(motor_tower=self.all_obj, motor_or_adaptor=self.y)
         self.all_obj = install_motors_on_motor_or_adaptors(motor_tower=self.all_obj, motor_or_adaptor=self.adaptor1)
+
+        self.all_motors = [self.y, self.z, self.x, self.roll, self.yaw]
+        self.obj_to_plot = [self.y, self.z, self.x, self.roll, self.yaw, self.optics]
+        self.all_optics = [self.optics, ]
 
     def y_umv(self, target):
         motion_time, displacement = self.y.user_move_abs(target=target, getMotionTime=True)
@@ -1574,7 +1621,7 @@ class Silicon_tower:
 
 
 class TG_Sample_tower:
-    def __init__(self, sample, yag_sample, yag1, yag2, yag3, ):
+    def __init__(self, sample, yag_sample, yag1, yag2, yag3):
 
         # Create the instance of each motors and adaptors
         self.adaptor1 = AdaptorPlate(height=10e3, dimension=[100e3, 100e3])
@@ -1584,7 +1631,7 @@ class TG_Sample_tower:
         self.z = get_motors_with_model_for_axis(model="XA10A", axis='z')
         self.adaptor3 = AdaptorPlate(height=30e3, dimension=[100e3, 100e3])
         self.adaptor4 = L_Bracket(height=35e3, dimension=[50e3, 50e3])
-        self.th = get_motors_with_model_for_axis(model="RA05A", axis='x')
+        self.th = get_motors_with_model_for_axis(model="RA05A", axis='y')
         self.adaptor5 = AdaptorPlate(height=72.7e3, dimension=[10e3, 10e3])
 
         self.sample = sample
@@ -1593,35 +1640,37 @@ class TG_Sample_tower:
         self.yag2 = yag2
         self.yag3 = yag3
 
-        # Install sample and sample_yag on the adaptor 5
-        displacement = self.adaptor5.top_mount_pos - self.sample.surface_point
-        self.sample.shift(displacement=displacement)
-
-        rot_mat = util.get_rotmat_around_axis(angleRadian=np.pi / 2, axis=np.array([0, 1, 0]))
+        # Currently the samples are pointing z axis, rotate them such that they are facing y axis
+        rot_mat = util.get_rotmat_around_axis(angleRadian=np.pi / 2, axis=np.array([0, 1, 0], dtype=np.float64))
+        self.sample.rotate_wrt_point(rot_mat=rot_mat, ref_point=np.copy(self.sample.surface_point))
         self.yag_sample.rotate_wrt_point(rot_mat=rot_mat, ref_point=np.copy(self.yag_sample.surface_point))
-        displacement = self.adaptor5.top_mount_pos + np.array([10e3, 0, 0]) - self.yag_sample.surface_point
-        self.yag_sample.shift(displacement=displacement)
 
-        # Assemble the small sample tower
+        # Install sample and sample_yag on the adaptor 5
+        displacement = np.copy(self.adaptor5.top_mount_pos - self.sample.surface_point)
+        self.sample.shift(displacement=displacement)
+        self.yag_sample.shift(displacement=displacement + np.array([0., 10e3, 0]))
+
+        # Rotate around the z axis to make the component horizontal
         self.all_obj = [self.adaptor5, self.yag_sample, self.sample]
-        rot_mat = util.get_rotmat_around_axis(angleRadian=np.pi / 2, axis=np.array([0, 0, 1]))
-        for item in self.all_obj:
-            item.rotate_wrt_point(rot_mat=rot_mat, ref_point=np.copy(self.adaptor5.bottom_mount_pos))
         self.all_obj = install_motors_on_motor_or_adaptors(self.all_obj, self.th)
+        rot_mat = util.get_rotmat_around_axis(angleRadian=np.pi / 2, axis=np.array([0, 0, 1], dtype=np.float64))
+        for item in self.all_obj:
+            item.rotate_wrt_point(rot_mat=rot_mat, ref_point=np.copy(self.th.bottom_mount_pos))
+
         self.all_obj = install_motors_on_motor_or_adaptors(self.all_obj, self.adaptor4)
 
-        rot_mat = util.get_rotmat_around_axis(angleRadian=np.deg2rad(5), axis=np.array([0, 1, 0]))
+        rot_mat = util.get_rotmat_around_axis(angleRadian=np.deg2rad(-5), axis=np.array([1, 0, 0], dtype=np.float64))
         for item in self.all_obj:
             item.rotate_wrt_point(rot_mat=rot_mat, ref_point=np.copy(self.adaptor4.bottom_mount_pos))
 
         # Assemble the small sample tower to the big sample and yag tower
-        self.yag1.shift(displacement=np.array([35.7e3, 67.5e3, -70.35e3]) + self.adaptor3.top_mount_pos)
-        self.yag2.shift(displacement=np.array([45.7e3, 67.5e3, -70.35e3]) + self.adaptor3.top_mount_pos)
-        self.yag2.shift(displacement=np.array([45.7e3, 77.5e3, -70.35e3]) + self.adaptor3.top_mount_pos)
-
-        displacement = np.array([0, 67.5e3, -70.35e3]) + self.adaptor3.top_mount_pos
+        displacement = np.array([0, -67.5e3, -70.35e3]) + np.copy(self.adaptor3.top_mount_pos)
         for item in self.all_obj:
             item.shift(displacement=displacement)
+
+        self.yag1.shift(displacement=np.array([35.7e3, 67.5e3, -70.35e3]) + np.copy(self.adaptor3.top_mount_pos))
+        self.yag2.shift(displacement=np.array([45.7e3, 67.5e3, -70.35e3]) + np.copy(self.adaptor3.top_mount_pos))
+        self.yag3.shift(displacement=np.array([45.7e3, 77.5e3, -70.35e3]) + np.copy(self.adaptor3.top_mount_pos))
         self.all_obj = [self.adaptor3, self.yag1, self.yag2, self.yag3] + self.all_obj
 
         self.all_obj = install_motors_on_motor_or_adaptors(motor_tower=self.all_obj, motor_or_adaptor=self.z)
@@ -1629,6 +1678,11 @@ class TG_Sample_tower:
         self.all_obj = install_motors_on_motor_or_adaptors(motor_tower=self.all_obj, motor_or_adaptor=self.adaptor2)
         self.all_obj = install_motors_on_motor_or_adaptors(motor_tower=self.all_obj, motor_or_adaptor=self.x)
         self.all_obj = install_motors_on_motor_or_adaptors(motor_tower=self.all_obj, motor_or_adaptor=self.adaptor1)
+
+        self.all_motors = [self.x, self.y, self.z, self.th]
+        self.obj_to_plot = [self.x, self.y, self.z, self.th, self.sample,
+                            self.yag_sample, self.yag1, self.yag2, self.yag3]
+        self.all_optics = [self.sample, self.yag_sample, self.yag1, self.yag2, self.yag3]
 
     def x_umv(self, target):
         motion_time, displacement = self.x.user_move_abs(target=target)

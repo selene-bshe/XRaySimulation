@@ -519,19 +519,19 @@ class CrystalTower_x_y_theta_chi:
         motion_time = self.chi.user_move_abs(target=target, getMotionTime=True)
         self.optics.rotate_wrt_point(rot_mat=rotMat, ref_point=self.chi.physical_rotation_center, include_boundary=True)
 
-    # def plot_motors(self, ax):
+    # def plot_motors(controller, ax):
     #    # Plot motors and crystals one by one
-    #    ax.plot(self.x.dp_boundary[:, 2], self.x.dp_boundary[:, 1],
-    #            linestyle='--', linewidth=1, label="x", color=self.color_list[0])
-    #    ax.plot(self.y.dp_boundary[:, 2], self.y.dp_boundary[:, 1],
-    #            linestyle='--', linewidth=1, label="y", color=self.color_list[1])
-    #    ax.plot(self.th.dp_boundary[:, 2], self.th.dp_boundary[:, 1],
-    #            linestyle='--', linewidth=1, label="th", color=self.color_list[2])
-    #    ax.plot(self.chi.dp_boundary[:, 2], self.chi.dp_boundary[:, 1],
-    #            linestyle='--', linewidth=1, label="chi", color=self.color_list[3])
-    #    for crystal in self.optics.crystal_list:
+    #    ax.plot(controller.x.dp_boundary[:, 2], controller.x.dp_boundary[:, 1],
+    #            linestyle='--', linewidth=1, label="x", color=controller.color_list[0])
+    #    ax.plot(controller.y.dp_boundary[:, 2], controller.y.dp_boundary[:, 1],
+    #            linestyle='--', linewidth=1, label="y", color=controller.color_list[1])
+    #    ax.plot(controller.th.dp_boundary[:, 2], controller.th.dp_boundary[:, 1],
+    #            linestyle='--', linewidth=1, label="th", color=controller.color_list[2])
+    #    ax.plot(controller.chi.dp_boundary[:, 2], controller.chi.dp_boundary[:, 1],
+    #            linestyle='--', linewidth=1, label="chi", color=controller.color_list[3])
+    #    for crystal in controller.optics.crystal_list:
     #        ax.plot(crystal.boundary[:, 2], crystal.boundary[:, 1],
-    #                linestyle='-', linewidth=3, label="crystal", color=self.color_list[4])
+    #                linestyle='-', linewidth=3, label="crystal", color=controller.color_list[4])
 
 
 class CrystalTower_miniSD_Scan:

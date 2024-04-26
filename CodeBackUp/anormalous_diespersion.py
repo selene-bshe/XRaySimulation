@@ -1,4 +1,3 @@
-
 def get_universal_anomalous_dispersion_curve_j(omega, omega_q, p):
     """
     This function get the Jq function value defined in paper

@@ -36,7 +36,6 @@ def align_devices(device_list,
 
         # Align the device
         if device.type == "Crystal: Bragg Reflection":
-
             # Align the reciprocal lattice with the incident wave vector
             util.align_crystal_reciprocal_lattice(crystal=device,
                                                   axis=kout)
@@ -80,7 +79,7 @@ def align_devices(device_list,
         if device.type == "Transmissive Grating":
             # Get rotation angle:
             util.align_grating_normal_direction(grating=device,
-                                                  axis=kout)
+                                                axis=kout)
 
         if device.type == "Transmission Telescope for CPA":
             util.align_telescope_optical_axis(telescope=device,
@@ -90,12 +89,9 @@ def align_devices(device_list,
         kout_list.append(util.get_kout(device=device, kin=kout))
 
 
-
-
-
 def get_bragg_rocking_curve_bk(kin, scan_range, scan_number, h_initial, normal_initial, thickness,
-                            chi0, chih_sigma, chihbar_sigma,
-                            chih_pi, chihbar_pi):
+                               chi0, chih_sigma, chihbar_sigma,
+                               chih_pi, chihbar_pi):
     """
 
     :param kin:

@@ -223,7 +223,7 @@ class CrystalBlock3D:
         #############################
         #      The boundary is defined in the following way
         #
-        #    (top, left) point 0        (middle perpendicular to self.normal) self.surface_point      point 1
+        #    (top, left) point 0        (middle perpendicular to controller.normal) controller.surface_point      point 1
         #      parallel to h
         #       point 3                                                                               point 2
         #
@@ -399,7 +399,7 @@ class CrystalBlock3D_auto:
         #############################
         #      The boundary is defined in the following way
         #
-        #    (top, left) point 0        (middle perpendicular to self.normal) self.surface_point      point 1
+        #    (top, left) point 0        (middle perpendicular to controller.normal) controller.surface_point      point 1
         #      parallel to h
         #       point 3                                                                               point 2
         #

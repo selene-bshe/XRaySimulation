@@ -1,4 +1,3 @@
-
 ##############################################################################
 #         For Gaussian incident spectrum
 ##############################################################################
@@ -625,4 +624,3 @@ def get_diffracted_vector_spectrum(k_grid,
     field_holder = {"final_spectrum": vector_spec_holder}
 
     return field_holder, reflectivity_holder, sanity_check
-

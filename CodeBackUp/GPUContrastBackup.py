@@ -349,7 +349,7 @@ def getCoherenceFunctionXY_GPU_Method2(nSpatial,
                 holderImagTmp += eFieldImag[idx1, tIdx] * eFieldReal[idx2, tIdx + deltaZ]
 
             newValue = holderRealTmp ** 2 + holderImagTmp ** 2
-            cuda.atomic.add(contrast,0, newValue * weight[sIdx])
+            cuda.atomic.add(contrast, 0, newValue * weight[sIdx])
 
             # Update the infor for the same deltaZ
             oldDeltaZ = int(deltaZ)

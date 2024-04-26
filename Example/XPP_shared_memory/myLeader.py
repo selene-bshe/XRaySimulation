@@ -42,7 +42,7 @@ class Plotter:
             p0 = [self.i0s.max(), self.th1s.mean(), 0.04, 0]
             p02 = [self.ipm2s.max(), self.th2s.mean(), 0.0004, 0]
             p0E = [self.i0s.max(), self.lom_EC.mean(), 0.05, 0]
-            #print (self.th1s, self.i0s)
+            #print (controller.th1s, controller.i0s)
             try:
                 th10,FWHM_th1, xplot,yplot = fit_gaussian_rocking_curve(self.th1s, self.i0s, p0)
                 print ('first crystal angle {}, {}'.format(th10, FWHM_th1))

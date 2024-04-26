@@ -61,12 +61,12 @@ class XppController_TG:
          pump2z_coef,
          pump2alpha_coef) = rayTracingCalculation.get_trajectory_dependence_on_various_parameters()
 
-        # self.cc1 = optics['cc1']
-        # self.cc2 = optics['cc2']
-        # self.vcc1 = optics['vcc1']
-        # self.vcc2 = optics['vcc2']
-        # self.vcc3 = optics['vcc3']
-        # self.vcc4 = optics['vcc4']
+        # controller.cc1 = optics['cc1']
+        # controller.cc2 = optics['cc2']
+        # controller.vcc1 = optics['vcc1']
+        # controller.vcc2 = optics['vcc2']
+        # controller.vcc3 = optics['vcc3']
+        # controller.vcc4 = optics['vcc4']
 
         self.cc1 = expSimu['devices']['cc'][0]
         self.cc2 = expSimu['devices']['cc'][1]
