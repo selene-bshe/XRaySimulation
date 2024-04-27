@@ -281,6 +281,58 @@ def get_bragg_rocking_curve(kin,
     return angles, reflect_sigma, reflect_pi, b_factor, kout
 
 
+def get_rocking_curve_around_axis(kin,
+                                  scan_range,
+                                  scan_number,
+                                  rotation_axis,
+                                  h_initial,
+                                  normal_initial,
+                                  thickness,
+                                  chi_dict):
+    """
+
+    :param kin:
+    :param scan_range:
+    :param scan_number:
+    :param h_initial:
+    :param normal_initial:
+    :param thickness:
+    :param chi_dict:
+    :return:
+    """
+
+    # ------------------------------------------------------------
+    #          Step 0: Generate h_array and normal_array for the scanning
+    # ------------------------------------------------------------
+    h_array = np.zeros((scan_number, 3), dtype=np.float64)
+    normal_array = np.zeros((scan_number, 3), dtype=np.float64)
+
+    # Get the scanning angle
+    angles = np.linspace(start=-scan_range / 2, stop=scan_range / 2, num=scan_number)
+
+    for idx in range(scan_number):
+        rot_mat = util.get_rotmat_around_axis(angleRadian=angles[idx], axis=rotation_axis)
+        h_array[idx] = rot_mat.dot(h_initial)
+        normal_array[idx] = rot_mat.dot(normal_initial)
+
+    # Create holder to save the reflectivity and output momentum
+    kin_grid = np.zeros_like(h_array, dtype=np.float64)
+    kin_grid[:, 0] = kin[0]
+    kin_grid[:, 1] = kin[1]
+    kin_grid[:, 2] = kin[2]
+
+    (reflect_sigma,
+     reflect_pi,
+     b_factor,
+     kout) = get_bragg_reflectivity_per_entry(kin=kin_grid,
+                                              thickness=thickness,
+                                              crystal_h=h_array,
+                                              normal=normal_array,
+                                              chi_dict=chi_dict)
+
+    return angles, reflect_sigma, reflect_pi, b_factor, kout
+
+
 def get_bragg_rocking_curve_channelcut(kin,
                                        channelcut,
                                        scan_range,
@@ -309,6 +361,73 @@ def get_bragg_rocking_curve_channelcut(kin,
 
     for idx in range(scan_number):
         rot_mat = util.rot_mat_in_yz_plane(theta=angles[idx])
+
+        h_array_1[idx] = rot_mat.dot(channelcut.crystal_list[0].h)
+        normal_array_1[idx] = rot_mat.dot(channelcut.crystal_list[0].normal)
+
+        h_array_2[idx] = rot_mat.dot(channelcut.crystal_list[1].h)
+        normal_array_2[idx] = rot_mat.dot(channelcut.crystal_list[1].normal)
+
+    # Create holder to save the reflectivity and output momentum
+    kin_grid = np.zeros_like(h_array_1, dtype=np.float64)
+    kin_grid[:, 0] = kin[0]
+    kin_grid[:, 1] = kin[1]
+    kin_grid[:, 2] = kin[2]
+
+    (reflect_sigma_1,
+     reflect_pi_1,
+     b_factor_1,
+     kout_1) = get_bragg_reflectivity_per_entry(kin=kin_grid,
+                                                thickness=channelcut.crystal_list[0].thickness,
+                                                crystal_h=h_array_1,
+                                                normal=normal_array_1,
+                                                chi_dict=channelcut.crystal_list[0].chi_dict)
+
+    (reflect_sigma_2,
+     reflect_pi_2,
+     b_factor_2,
+     kout_2) = get_bragg_reflectivity_per_entry(kin=kout_1,
+                                                thickness=channelcut.crystal_list[1].thickness,
+                                                crystal_h=h_array_2,
+                                                normal=normal_array_2,
+                                                chi_dict=channelcut.crystal_list[1].chi_dict)
+
+    return (angles,
+            reflect_sigma_1 * reflect_sigma_2,
+            reflect_pi_1 * reflect_pi_2,
+            b_factor_1 * b_factor_2,
+            kout_2)
+
+
+def get_rocking_curve_channelcut_around_axis(kin,
+                                             rotation_axis,
+                                             channelcut,
+                                             scan_range,
+                                             scan_number,
+                                             ):
+    """
+
+    :param kin:
+    :param channelcut
+    :param scan_range:
+    :param scan_number:
+    :return:
+    """
+
+    # ------------------------------------------------------------
+    #          Step 0: Generate h_array and normal_array for the scanning
+    # ------------------------------------------------------------
+    h_array_1 = np.zeros((scan_number, 3), dtype=np.float64)
+    normal_array_1 = np.zeros((scan_number, 3), dtype=np.float64)
+
+    h_array_2 = np.zeros((scan_number, 3), dtype=np.float64)
+    normal_array_2 = np.zeros((scan_number, 3), dtype=np.float64)
+
+    # Get the scanning angle
+    angles = np.linspace(start=-scan_range / 2, stop=scan_range / 2, num=scan_number)
+
+    for idx in range(scan_number):
+        rot_mat = util.get_rotmat_around_axis(angleRadian=angles[idx], axis=rotation_axis)
 
         h_array_1[idx] = rot_mat.dot(channelcut.crystal_list[0].h)
         normal_array_1[idx] = rot_mat.dot(channelcut.crystal_list[0].normal)
@@ -380,7 +499,7 @@ def align_crystal_reciprocal_lattice(crystal, axis, rot_center=None):
                              ref_point=rot_center)
 
 
-def align_crystal_geometric_bragg_reflection(crystal, kin, rot_direction=1, rot_center=None):
+def align_crystal_geometric_bragg_reflection(crystal, kin, rot_direction=1, rot_center=None, get_angle=False):
     if rot_center is None:
         rot_center = np.copy(crystal.surface_point)
 
@@ -1360,8 +1479,8 @@ def get_interpolated_eField(kvec_array, coor_dict, efield_array, k0, mode, coor_
     # 2024-04-04 implement the 3D interpolation with low efficiency first
     # Even though the calculation is less efficient, it is more universal and maybe more compatible with the simulation
     if mode == "xyz 3D":
-        #print("Interpolate the electric field such that after the intpolation")
-        #print("the three axes of the array are parallel to that of the x,y,z axes.")
+        # print("Interpolate the electric field such that after the intpolation")
+        # print("the three axes of the array are parallel to that of the x,y,z axes.")
         # For VCC pulse, we want to interpolate within the yz plane, or the xpp x - xpp z plane.
 
         oldShape = np.array(efield_array.shape)
@@ -1383,11 +1502,11 @@ def get_interpolated_eField(kvec_array, coor_dict, efield_array, k0, mode, coor_
         u_mat /= 2 * np.pi
         u_mat_inv = np.linalg.inv(u_mat)
 
-        #print(u_mat)
-        #print(u_mat_inv)
-        #print(u1)
-        #print(u2)
-        #print(u3)
+        # print(u_mat)
+        # print(u_mat_inv)
+        # print(u1)
+        # print(u2)
+        # print(u3)
 
         # Get the position grid for interpolation
         if coor_info_new:
@@ -1423,7 +1542,7 @@ def get_interpolated_eField(kvec_array, coor_dict, efield_array, k0, mode, coor_
             ny = int(ny)
             nz = int(nz)
 
-        #print(nx, ny, nz)
+        # print(nx, ny, nz)
         # return 0
 
         # ---------------------------------------------------

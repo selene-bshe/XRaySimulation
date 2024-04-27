@@ -648,15 +648,15 @@ def assemble_motors_and_optics(Ec=9.8):
     optics_all = get_optics(Ec=Ec)
 
     # Get all the motors
-    t1 = Motors.CrystalTower_x_y_theta_chi(channelCut=optics_all['cc1'],
+    t1 = Motors.CrystalTower_x_y_theta_chi(crystal=optics_all['cc1'],
                                            crystal_loc=np.copy(optics_all['cc1'].crystal_list[0].surface_point, ))
-    t6 = Motors.CrystalTower_x_y_theta_chi(channelCut=optics_all['cc2'],
+    t6 = Motors.CrystalTower_x_y_theta_chi(crystal=optics_all['cc2'],
                                            crystal_loc=np.copy(optics_all['cc2'].crystal_list[0].surface_point, ))
 
     # For the VCC branch
-    t2 = Motors.CrystalTower_x_y_theta_chi(channelCut=optics_all['vcc1'],
+    t2 = Motors.CrystalTower_x_y_theta_chi(crystal=optics_all['vcc1'],
                                            crystal_loc=np.copy(optics_all['vcc1'].crystal_list[0].surface_point, ))
-    t3 = Motors.CrystalTower_x_y_theta_chi(channelCut=optics_all['vcc2'],
+    t3 = Motors.CrystalTower_x_y_theta_chi(crystal=optics_all['vcc2'],
                                            crystal_loc=np.copy(optics_all['vcc2'].crystal_list[0].surface_point, ))
     t45 = Motors.CrystalTower_miniSD_Scan(channelCut1=optics_all['vcc3'],
                                           crystal_loc1=np.copy(optics_all['vcc3'].crystal_list[0].surface_point, ),

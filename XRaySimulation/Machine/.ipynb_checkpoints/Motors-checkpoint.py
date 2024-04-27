@@ -545,7 +545,7 @@ class CrystalTower_miniSD_Scan:
                  channelCut2, crystal_loc2):
         """
         Install the channel-cut crystal such that it moves with the motors
-        :param channelCut:
+        :param crystal:
         """
         # Create the instance of each motors
         # This is the lower_most stage
@@ -1341,7 +1341,7 @@ class TG_Sample_tower:
                  yag1, yag2, yag3, ):
         """
         Install the channel-cut crystal such that it moves with the motors
-        :param channelCut:
+        :param crystal:
         """
         # Create the instance of each motors
 

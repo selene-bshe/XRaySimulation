@@ -112,6 +112,7 @@ def rot_mat_in_yz_plane(theta):
 
     return rotmat
 
+
 def rot_mat_in_xz_plane(theta):
     """
     Get a rotation matrix 3x3 for rotation around x axis
@@ -1143,7 +1144,7 @@ def time_stamp():
 ########################################################################################################################
 #                     Curve analysis
 ########################################################################################################################
-def get_fwhm(coordinate, curve_values, center=False):
+def get_fwhm(coordinate, curve_values, center=False, get_index=False):
     """
     Get the FWHM in the straightforward way.
     However, notice that, when one calculate the FWHM in this way, the result
@@ -1179,7 +1180,10 @@ def get_fwhm(coordinate, curve_values, center=False):
 
         mean = np.sum(np.multiply(distribution, coordinate_roi))
 
-        return fwhm, mean
+        if get_index:
+            return fwhm, mean, (left_idx + right_idx) // 2
+        else:
+            return fwhm, mean
     else:
         return fwhm
 

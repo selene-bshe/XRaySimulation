@@ -7,187 +7,42 @@ import h5py
 
 sys.path.append("../../../../XRaySimulation")
 
-from XRaySimulation import Crystal, DeviceSimu, util
+from XRaySimulation import Crystal, DeviceSimu, util, Pulse
 from XRaySimulation.Machine import Motors, ScintillatorCamera
 
 # The following modules are loaded as a temporary solution
 import rayTracingCalculation
 
+si220 = {'d': 1.9201 * 1e-4,
+         "chi0": complex(-0.10169E-04, 0.16106E-06),
+         "chih_sigma": complex(0.61786E-05, - 0.15508E-06),
+         "chihbar_sigma": complex(0.61786E-05, -0.15508E-06),
+         "chih_pi": complex(0.48374E-05, -0.11996E-06),
+         "chihbar_pi": complex(0.48374E-05, -0.11996E-06),
+         }
 
-class XppController_TG:
-    """
-    With this object, I define a lot of ways to access each motors.
-    This certainly makes this object prone to error.
-    However, I have little time to find a better solution.
-    If you intend to use this future for your own work,
-    you definitely need to rethink about the logic to make it compatible
-    for your own applications
+si111 = {'d': 3.1355 * 1e-4,
+         "chi0": complex(-0.10169E-04, 0.16106E-06),
+         "chih_sigma": complex(0.53693E-05, -0.11228E-06),
+         "chihbar_sigma": complex(0.53693E-05, -0.11228E-06),
+         "chih_pi": complex(0.49322E-05, -0.10272E-06),
+         "chihbar_pi": complex(0.49322E-05, -0.10272E-06),
+         }
 
-    """
+dia111 = {'d': 2.0593 * 1e-4,
+          "chi0": complex(-0.15217E-04, 0.13392E-07),
+          "chih_sigma": complex(0.55417E-05, -0.93083E-08),
+          "chihbar_sigma": complex(0.55417E-05, -0.93083E-08),
+          "chih_pi": complex(0.44959E-05, - 0.74602E-08),
+          "chihbar_pi": complex(0.44959E-05, -0.74602E-08),
+          }
 
-    def __init__(self):
-        # Step 1 Create all the optics and motors
-        motors, optics = assemble_motors_and_optics(Ec=9.8)
-
-        # Step 2 Create properties associate with each component
-        self._motor_stacks = motors
-        self._optics = optics
-
-        self.t1 = motors['t1']
-        self.t2 = motors['t2']
-        self.t3 = motors['t3']
-        self.t45 = motors['t45']
-        self.t6 = motors['t6']
-        self.g1 = motors['g1']
-        self.g2 = motors['g2']
-        self.tg_g = motors['tg g']
-        self.m1 = motors['m1']
-        self.m2a = motors['m2a']
-        self.m2b = motors['m2b']
-        self.si = motors['si']
-        self.sample = motors['sample']
-
-        self.all_towers = [self.t1, self.t2, self.t3, self.t45, self.t6,
-                           self.g1, self.g2, self.tg_g,
-                           self.m1, self.m2a, self.m2b, self.si, self.sample, ]
-
-        # Install the crystal towers on the breadboard
-        self.breadboard1 = Motors.Breadboard(hole_num_x=23, hole_num_z=55, gauge='metric')
-        # controller.breadboard2 = Motors.Breadboard(hole_num_x=17, hole_num_z=17, gauge='metric')
-        self.breadboard3 = Motors.Breadboard(hole_num_x=34, hole_num_z=55, gauge='metric')
-
-        # Install SD table
-        self.breadboard1.shift(displacement=np.array([-220e3 - 12.7e3, -225e3, 0, ]))
-        Motors.install_motors_on_breadboard(motor_stack=self.t1.all_obj, breadboard=self.breadboard1,
-                                            diag_hole_idx1=(7, 0), diag_hole_idx2=(11, 5))
-        Motors.install_motors_on_breadboard(motor_stack=self.t2.all_obj, breadboard=self.breadboard1,
-                                            diag_hole_idx1=(7, 8), diag_hole_idx2=(11, 14))
-        Motors.install_motors_on_breadboard(motor_stack=self.t3.all_obj, breadboard=self.breadboard1,
-                                            diag_hole_idx1=(7, 16), diag_hole_idx2=(11, 22))
-        Motors.install_motors_on_breadboard(motor_stack=self.t45.all_obj, breadboard=self.breadboard1,
-                                            diag_hole_idx1=(7, 27), diag_hole_idx2=(11, 37))
-        Motors.install_motors_on_breadboard(motor_stack=self.t6.all_obj, breadboard=self.breadboard1,
-                                            diag_hole_idx1=(7, 42), diag_hole_idx2=(11, 47))
-
-        # Install mirror1
-        displacement = np.array([0.0, 0.0, 4e6]) - self.m1.optics.surface_point
-        for item in self.m1.all_obj:
-            item.shift(displacement=displacement)
-
-        # Install sample table
-        self.breadboard3.shift(displacement=np.array([-254e3, -212.5e3, 7e6]))
-        Motors.install_motors_on_breadboard(motor_stack=self.m2a.all_obj, breadboard=self.breadboard3,
-                                            diag_hole_idx1=(0, 0), diag_hole_idx2=(4, 12))
-        Motors.install_motors_on_breadboard(motor_stack=self.m2b.all_obj, breadboard=self.breadboard3,
-                                            diag_hole_idx1=(13, 0), diag_hole_idx2=(17, 12))
-        Motors.install_motors_on_breadboard(motor_stack=self.sample.all_obj, breadboard=self.breadboard3,
-                                            diag_hole_idx1=(5, 23), diag_hole_idx2=(8, 28))
-
-        # print("mounting", self.sample.all_obj[0].top_mount_pos, self.sample.all_obj[0].bottom_mount_pos, )
-        # for optics in self.sample.all_optics:
-        #    print(optics.surface_point)
-
-        Motors.install_motors_on_breadboard(motor_stack=self.si.all_obj, breadboard=self.breadboard3,
-                                            diag_hole_idx1=(5, 24), diag_hole_idx2=(10, 28))
-
-        displacement = np.array([412.7e3 - 254e3, 0.0, 0.0])
-        for item in self.si.all_obj:
-            item.shift(displacement=displacement)
-
-        # Install the gratings
-        # Assume that there is no need to align the gratings
-        displacement = np.array([0.0, 0.0, -1.9e6]) - self.g1.grating_1.surface_point
-        for item in self.g1.all_obj:
-            item.shift(displacement=displacement)
-
-        displacement = np.array([0.0, 0.0, 3.8e6]) - self.g2.grating_1.surface_point
-        for item in self.g2.all_obj:
-            item.shift(displacement=displacement)
-
-        displacement = np.array([0.0, 0.0, 1.5e6]) - self.tg_g.grating_1.surface_point
-        for item in self.tg_g.all_obj:
-            item.shift(displacement=displacement)
-
-        # Add the shutter
-        self.cc_shutter = True
-        self.vcc_shutter = True
-
-        # Step 4 Rotate the crystals such that they are at the ideal location
-        pass
-
-        # Step 5 Add diodes
-
-        # Step 6 Add cameras
-        self.pixel_num_x = 2048
-        self.pixel_num_y = 2048
-
-        # Add record
-        self.record = []
-
-    # def save_operation_record(controller, file_name=None):
-    #    if file_name is None:
-    #        file_name = "~/Desktop/operation_record_{}.h5".format(util.time_stamp())
-    #    with h5py.File(file_name, 'wb') as target:
-    #        target.create_dataset(name='t1x', data=np.array(controller.record['t1x']))
-
-    def align_crystals(self):
-        pass
-
-    def plot_motors(self, ax):
-        for tower in self.all_towers:
-            for item in tower.all_motors:
-                ax.plot(item.boundary[:, 2] / 1000, item.boundary[:, 1] / 1000, c='black')
-
-    def plot_optics(self, ax):
-        for tower in self.all_towers:
-            for item in tower.all_optics:
-                ax.plot(item.boundary[:, 2] / 1000, item.boundary[:, 1] / 1000, c='blue')
-
-    def get_diode(self):
-        pass
-
-    def get_camera(self):
-        pass
-
-    def show_cc(self):
-        self.cc_shutter = True
-        self.vcc_shutter = False
-
-    def show_vcc(self):
-        self.vcc_shutter = True
-        self.cc_shutter = False
-
-    def show_both(self):
-        self.vcc_shutter = True
-        self.cc_shutter = True
-
-    def show_neither(self):
-        self.vcc_shutter = False
-        self.cc_shutter = False
+g1_period = 1  # um
+g2_period = 1  # um
+tg_g_period = 1  # um
 
 
-def get_optics(Ec=9.8):
-    si220 = {'d': 1.9201 * 1e-4,
-             "chi0": complex(-0.97631E-05, 0.14871E-06),
-             "chih_sigma": complex(0.59310E-05, -0.14320E-06),
-             "chihbar_sigma": complex(0.59310E-05, -0.14320E-06),
-             "chih_pi": complex(0.46945E-05, -0.11201E-06),
-             "chihbar_pi": complex(0.46945E-05, -0.11201E-06),
-             }
-
-    si111 = {'d': 3.1355 * 1e-4,
-             "chi0": complex(-0.10826E-04, 0.18209E-06),
-             "chih_sigma": complex(0.57174E-05, - 0.12694E-06),
-             "chihbar_sigma": complex(0.57174E-05, - 0.12694E-06),
-             "chih_pi": complex(0.52222E-05, -0.11545E-06),
-             "chihbar_pi": complex(0.52222E-05, -0.11545E-06),
-             }
-
-    g1_period = 1  # um
-    g2_period = 1  # um
-    tg_g_period = 1  # um
-    # Crystal
-
+def get_optics():
     # Define gratings
     g1_cc = Crystal.RectangleGrating(a=g1_period / 2.,
                                      b=g1_period / 2.,
@@ -226,6 +81,22 @@ def get_optics(Ec=9.8):
 
     tg_mirror_probe = Crystal.TotalReflectionMirror(surface_point=np.zeros(3), normal=np.array([-1.0, 0, 0]))
 
+    # ------------------------------------------
+    #   Get crystal for XPP mono
+    # ------------------------------------------
+    mono_miscut = [np.deg2rad(0.0), np.deg2rad(0.0)]
+    mono_diamond = [Crystal.CrystalBlock3D(h=np.array([0., 2. * np.pi / dia111['d'], 0.]),
+                                           normal=np.array(
+                                               [0., -np.cos(mono_miscut[x]), np.sin(mono_miscut[x])]),
+                                           surface_point=np.zeros(3, dtype=np.float64),
+                                           thickness=10e3,
+                                           chi_dict=dia111,
+                                           edge_length=20e3) for x in range(2)]
+    mono_diamond[1].rotate_wrt_point(rot_mat=np.array([[1, 0, 0],
+                                                       [0, -1, 0],
+                                                       [0, 0, -1]], dtype=np.float64),
+                                     ref_point=np.copy(mono_diamond[1].surface_point))
+
     # ------------------------------------------------
     #    Get VCC
     # Define Bragg crystals
@@ -238,7 +109,6 @@ def get_optics(Ec=9.8):
                                                  ])
     vcc_channel_cuts = [Crystal.ChannelCut(crystal_type="Silicon",
                                            miller_index="220",
-                                           energy_keV=Ec,
                                            thickness_list=np.array([1e4, 1e4]),
                                            gap=13.595e3,
                                            surface_center_offset=32.5e3,
@@ -263,7 +133,6 @@ def get_optics(Ec=9.8):
 
     cc_channel_cuts = [Crystal.ChannelCut(crystal_type="Silicon",
                                           miller_index="220",
-                                          energy_keV=Ec,
                                           thickness_list=np.array([1e4, 1e4]),
                                           gap=cc_channel_cut_gap[_x],
                                           surface_center_offset=cc_channel_cut_center_offset[_x],
@@ -318,24 +187,31 @@ def get_optics(Ec=9.8):
                    "yag2": yag2,
                    "yag3": yag3,
                    "sample": sample,
+                   "xpp mono": mono_diamond,
                    }
     return optics_dict
 
 
-def assemble_motors_and_optics(Ec=9.8):
+def assemble_motors_and_optics():
     # Get all the optics
-    optics_all = get_optics(Ec=Ec)
+    optics_all = get_optics()
 
+    # Get the XPP mono
+    monoT1 = Motors.CrystalTower_x_y_theta_chi(crystal=optics_all['xpp mono'][0],
+                                               crystal_loc=np.copy(optics_all['xpp mono'][0].surface_point, ))
+
+    monoT2 = Motors.CrystalTower_x_y_theta_chi(crystal=optics_all['xpp mono'][1],
+                                               crystal_loc=np.copy(optics_all['xpp mono'][1].surface_point, ))
     # Get all the motors
-    t1 = Motors.CrystalTower_x_y_theta_chi(channelCut=optics_all['cc1'],
+    t1 = Motors.CrystalTower_x_y_theta_chi(crystal=optics_all['cc1'],
                                            crystal_loc=np.copy(optics_all['cc1'].crystal_list[0].surface_point, ))
-    t6 = Motors.CrystalTower_x_y_theta_chi(channelCut=optics_all['cc2'],
+    t6 = Motors.CrystalTower_x_y_theta_chi(crystal=optics_all['cc2'],
                                            crystal_loc=np.copy(optics_all['cc2'].crystal_list[1].surface_point, ))
 
     # For the VCC branch
-    t2 = Motors.CrystalTower_x_y_theta_chi(channelCut=optics_all['vcc1'],
+    t2 = Motors.CrystalTower_x_y_theta_chi(crystal=optics_all['vcc1'],
                                            crystal_loc=np.copy(optics_all['vcc1'].crystal_list[0].surface_point, ))
-    t3 = Motors.CrystalTower_x_y_theta_chi(channelCut=optics_all['vcc2'],
+    t3 = Motors.CrystalTower_x_y_theta_chi(crystal=optics_all['vcc2'],
                                            crystal_loc=np.copy(optics_all['vcc2'].crystal_list[1].surface_point, ))
     t45 = Motors.CrystalTower_miniSD_Scan(channelCut2=optics_all['vcc3'],
                                           crystal_loc2=np.copy(optics_all['vcc3'].crystal_list[0].surface_point, ),
@@ -355,10 +231,8 @@ def assemble_motors_and_optics(Ec=9.8):
 
     # Get the Mirror tower
     m1 = Motors.Tower_x_y_pi(mirror=optics_all['tg mirror probe'], )
-    m2a = Motors.Mirror_tower1(mirror=optics_all['tg mirror pump a'],
-                               crystal_loc=np.copy(optics_all['tg mirror pump a'].surface_point), )
-    m2b = Motors.Mirror_tower2(mirror=optics_all['tg mirror pump b'],
-                               crystal_loc=np.copy(optics_all['tg mirror pump b'].surface_point), )
+    m2a = Motors.Mirror_tower1(mirror=optics_all['tg mirror pump a'])
+    m2b = Motors.Mirror_tower2(mirror=optics_all['tg mirror pump b'])
 
     # Get the silicon tower
     si = Motors.Silicon_tower(crystal=optics_all['tg si111'], )
@@ -383,8 +257,361 @@ def assemble_motors_and_optics(Ec=9.8):
                     'm2a': m2a,
                     'm2b': m2b,
                     "si": si,
-                    'sample': sample}
-
-    # TODO: Need to specify the installation location with respect to the optical breadboard.
+                    'sample': sample,
+                    'mono t1': monoT1,
+                    'mono t2': monoT2}
 
     return motor_stacks, optics_all
+
+
+class XppController_TG:
+    """
+    With this object, I define a lot of ways to access each motors.
+    This certainly makes this object prone to error.
+    However, I have little time to find a better solution.
+    If you intend to use this future for your own work,
+    you definitely need to rethink about the logic to make it compatible
+    for your own applications
+
+    """
+
+    def __init__(self, photon_kev=9.8):
+
+        fwhm = 200  # um
+
+        # Define a reference pulse for the alignment
+
+        self.gaussian_pulse = Pulse.GaussianPulse3D()
+        self.gaussian_pulse.set_pulse_properties(central_energy=photon_kev,
+                                                 polar=[1., 0., 0.],
+                                                 sigma_x=fwhm / 2. / np.sqrt(np.log(2)) / util.c,
+                                                 sigma_y=fwhm / 2. / np.sqrt(np.log(2)) / util.c,
+                                                 sigma_z=9.,
+                                                 x0=np.array([0., 0., -30e6]))
+        self.wavelength = np.pi * 2 / util.kev_to_wavevec_length(energy=photon_kev)
+
+        # Step 1 Create all the optics and motors
+        motors, optics = assemble_motors_and_optics()
+
+        # Step 2 Create properties associate with each component
+        self._motor_stacks = motors
+        self._optics = optics
+
+        self.mono_t1 = motors['mono t1']
+        self.mono_t2 = motors['mono t2']
+
+        self.t1 = motors['t1']
+        self.t2 = motors['t2']
+        self.t3 = motors['t3']
+        self.t45 = motors['t45']
+        self.t6 = motors['t6']
+        self.g1 = motors['g1']
+        self.g2 = motors['g2']
+        self.tg_g = motors['tg g']
+        self.m1 = motors['m1']
+        self.m2a = motors['m2a']
+        self.m2b = motors['m2b']
+        self.si = motors['si']
+        self.sample = motors['sample']
+
+        self.all_towers = [self.mono_t1, self.mono_t2,
+                           self.t1, self.t2, self.t3, self.t45, self.t6,
+                           self.g1, self.g2, self.tg_g,
+                           self.m1, self.m2a, self.m2b, self.si, self.sample, ]
+
+        # Insatll the XPP mono
+        bragg = util.get_bragg_angle(wave_length=self.wavelength, plane_distance=3.1355 * 1e-4)
+        # Assume that the gap size is 50 cm, then the z offset is gap / np.tan(2 * bragg)
+        gap = 50e3
+        z_offset = gap / np.tan(2 * bragg)
+
+        # Shift the pulse and mono tower 1
+        displacement = np.array([0, -gap, -z_offset], dtype=np.float64)
+        self.gaussian_pulse.shift(displacement=displacement)
+        for item in self.mono_t1.all_obj:
+            item.shift(displacement=displacement)
+
+        # Shift the installation location of the xpp mono
+        displacement = np.array([0, 0, -10e6], dtype=np.float64)
+        for item in self.mono_t1.all_obj:
+            item.shift(displacement=displacement)
+        for item in self.mono_t2.all_obj:
+            item.shift(displacement=displacement)
+
+        # Install the crystal towers on the breadboard
+        self.breadboard1 = Motors.Breadboard(hole_num_x=23, hole_num_z=55, gauge='metric')
+        # controller.breadboard2 = Motors.Breadboard(hole_num_x=17, hole_num_z=17, gauge='metric')
+        self.breadboard3 = Motors.Breadboard(hole_num_x=34, hole_num_z=55, gauge='metric')
+
+        # Install SD table
+        self.breadboard1.shift(displacement=np.array([-220e3 - 12.7e3, -225e3, 0, ]))
+        Motors.install_motors_on_breadboard(motor_stack=self.t1.all_obj, breadboard=self.breadboard1,
+                                            diag_hole_idx1=(7, 0), diag_hole_idx2=(11, 5))
+        Motors.install_motors_on_breadboard(motor_stack=self.t2.all_obj, breadboard=self.breadboard1,
+                                            diag_hole_idx1=(7, 8), diag_hole_idx2=(11, 14))
+        Motors.install_motors_on_breadboard(motor_stack=self.t3.all_obj, breadboard=self.breadboard1,
+                                            diag_hole_idx1=(7, 16), diag_hole_idx2=(11, 22))
+        Motors.install_motors_on_breadboard(motor_stack=self.t45.all_obj, breadboard=self.breadboard1,
+                                            diag_hole_idx1=(7, 27), diag_hole_idx2=(11, 37))
+        Motors.install_motors_on_breadboard(motor_stack=self.t6.all_obj, breadboard=self.breadboard1,
+                                            diag_hole_idx1=(7, 42), diag_hole_idx2=(11, 47))
+
+        # Install mirror1
+        displacement = np.array([0.0, 0.0, 4e6]) - self.m1.optics.surface_point
+        for item in self.m1.all_obj:
+            item.shift(displacement=displacement)
+
+        # Install sample table
+        self.breadboard3.shift(displacement=np.array([-254e3, -212.5e3, 7e6]))
+        Motors.install_motors_on_breadboard(motor_stack=self.m2a.all_obj, breadboard=self.breadboard3,
+                                            diag_hole_idx1=(0, 0), diag_hole_idx2=(4, 12))
+        Motors.install_motors_on_breadboard(motor_stack=self.m2b.all_obj, breadboard=self.breadboard3,
+                                            diag_hole_idx1=(13, 0), diag_hole_idx2=(17, 12))
+        Motors.install_motors_on_breadboard(motor_stack=self.sample.all_obj, breadboard=self.breadboard3,
+                                            diag_hole_idx1=(5, 23), diag_hole_idx2=(8, 28))
+        Motors.install_motors_on_breadboard(motor_stack=self.si.all_obj, breadboard=self.breadboard3,
+                                            diag_hole_idx1=(5, 24), diag_hole_idx2=(10, 28))
+
+        displacement = np.array([412.7e3 - 254e3, 0.0, 0.0])
+        for item in self.si.all_obj:
+            item.shift(displacement=displacement)
+
+        # Install the gratings
+        # Assume that there is no need to align the gratings
+        displacement = np.array([0.0, 0.0, -1.9e6]) - self.g1.grating_1.surface_point
+        for item in self.g1.all_obj:
+            item.shift(displacement=displacement)
+
+        displacement = np.array([0.0, 0.0, 3.8e6]) - self.g2.grating_1.surface_point
+        for item in self.g2.all_obj:
+            item.shift(displacement=displacement)
+
+        displacement = np.array([0.0, 0.0, 1.5e6]) - self.tg_g.grating_1.surface_point
+        for item in self.tg_g.all_obj:
+            item.shift(displacement=displacement)
+
+        # Add the shutter
+        self.cc_shutter = True
+        self.vcc_shutter = True
+
+        # Step 5 Add diodes
+
+        # Step 6 Add cameras
+        self.pixel_num_x = 2048
+        self.pixel_num_y = 2048
+
+        # Add record
+        self.record = []
+        self.mono_t1_rocking = [np.zeros(10 ** 4), np.zeros(10 ** 4)]
+        self.mono_t2_rocking = [np.zeros(10 ** 4), np.zeros(10 ** 4)]
+
+        self.t1_rocking = [np.zeros(10 ** 4), np.zeros(10 ** 4)]
+        self.t2_rocking = [np.zeros(10 ** 4), np.zeros(10 ** 4)]
+        self.t3_rocking = [np.zeros(10 ** 4), np.zeros(10 ** 4)]
+        self.t4_rocking = [np.zeros(10 ** 4), np.zeros(10 ** 4)]
+        self.t5_rocking = [np.zeros(10 ** 4), np.zeros(10 ** 4)]
+        self.t6_rocking = [np.zeros(10 ** 4), np.zeros(10 ** 4)]
+
+    def align_xpp_mono(self):
+
+        # Get the geometry bragg angle
+        bragg = util.get_bragg_angle(wave_length=np.pi * 2 / self.gaussian_pulse.klen0, plane_distance=dia111['d'])
+
+        # Step 1, move the mono1 th to the geometric location
+        _ = self.mono_t1.th_umv(target=-bragg)
+        _ = self.mono_t2.th_umv(target=-bragg)
+
+        # Step 2, get the rocking curve around the motion axis for the two crystals.
+        (angles1, reflect_sigma1,
+         reflect_pi1, b_factor1, kout1) = DeviceSimu.get_rocking_curve_around_axis(
+            kin=self.gaussian_pulse.k0,
+            scan_range=np.deg2rad(0.5),
+            scan_number=10 ** 4,
+            rotation_axis=self.mono_t1.th.rotation_axis,
+            h_initial=self.mono_t1.optics.h,
+            normal_initial=self.mono_t1.optics.normal,
+            thickness=self.mono_t1.optics.thickness,
+            chi_dict=self.mono_t1.optics.chi_dict, )
+
+        # Get the target bragg peak
+        fwhm, angle_adjust, index = util.get_fwhm(coordinate=angles1,
+                                                  curve_values=np.square(np.abs(reflect_sigma1)),
+                                                  center=True,
+                                                  get_index=True)
+
+        # Move the crystal to the target location
+        _ = self.mono_t1.th_umv(target=-bragg + angle_adjust)
+
+        # Align the second crystal
+        kin1 = np.copy(kout1[index])
+
+        (angles2, reflect_sigma2,
+         reflect_pi2, b_factor2, kout2) = DeviceSimu.get_rocking_curve_around_axis(
+            kin=kin1,
+            scan_range=np.deg2rad(0.5),
+            scan_number=10 ** 4,
+            rotation_axis=self.mono_t2.th.rotation_axis,
+            h_initial=self.mono_t2.optics.h,
+            normal_initial=self.mono_t2.optics.normal,
+            thickness=self.mono_t2.optics.thickness,
+            chi_dict=self.mono_t2.optics.chi_dict, )
+
+        # Get the target bragg peak
+        fwhm2, angle_adjust2, index2 = util.get_fwhm(coordinate=angles2,
+                                                     curve_values=np.square(np.abs(reflect_sigma2)),
+                                                     center=True,
+                                                     get_index=True)
+        _ = self.mono_t2.th_umv(target=-bragg + angle_adjust2)
+
+        self.mono_t1_rocking = [angles1 - angle_adjust, np.square(np.abs(reflect_sigma1)) / np.abs(b_factor1)]
+        self.mono_t2_rocking = [angles2 - angle_adjust2, np.square(np.abs(reflect_sigma2)) / np.abs(b_factor2)]
+
+        return ((angles1 + angle_adjust, np.square(np.abs(reflect_sigma1)) / np.abs(b_factor1), kout1),
+                (angles2 + angle_adjust2, np.square(np.abs(reflect_sigma2)) / np.abs(b_factor2), kout2),)
+
+    def align_miniSD(self):
+
+        # Get the kout after the XPP mono
+        _, kout, _ = DeviceSimu.get_lightpath(device_list=[self.mono_t1.optics, self.mono_t2.optics],
+                                              kin=self.gaussian_pulse.k0,
+                                              initial_point=self.gaussian_pulse.x0,
+                                              final_plane_point=np.array([0, 0, 10e6]),
+                                              final_plane_normal=np.array([0, 0, -1]))
+        kout = kout[-1]
+
+        # Get the geometry bragg angle
+        bragg = util.get_bragg_angle(wave_length=np.pi * 2 / self.gaussian_pulse.klen0, plane_distance=si220['d'])
+        bragg_list = [bragg, -bragg, bragg, -bragg, bragg, -bragg]
+
+        # Step 1, move the mono1 th to the geometric location
+        _ = self.t1.th_umv(target=bragg_list[0])
+        _ = self.t2.th_umv(target=bragg_list[1])
+        _ = self.t3.th_umv(target=bragg_list[2])
+        _ = self.t45.th1_umv(target=bragg_list[3])
+        _ = self.t45.th2_umv(target=bragg_list[4])
+        _ = self.t6.th_umv(target=bragg_list[5])
+
+        # Fine adjustment according to dynamical diffraction theory
+        kin = np.copy(kout + self.g1.grating_m1.momentum_transfer)
+        combo = [[self.t1, self.t1_rocking, bragg_list[0]],
+                 [self.t6, self.t6_rocking, bragg_list[-1]], ]
+        for tower in combo:
+            # Step 2, get the rocking curve around the motion axis for the two crystals.
+            (angles1, reflect_sigma1,
+             reflect_pi1, b_factor1, kout1) = DeviceSimu.get_rocking_curve_channelcut_around_axis(
+                kin=kin,
+                scan_range=np.deg2rad(0.5),
+                scan_number=10 ** 4,
+                rotation_axis=tower[0].th.rotation_axis,
+                channelcut=tower[0].optics, )
+
+            # Get the target bragg peak
+            fwhm, angle_adjust, index = util.get_fwhm(coordinate=angles1,
+                                                      curve_values=np.square(np.abs(reflect_sigma1)),
+                                                      center=True,
+                                                      get_index=True)
+            # Move the crystal to the target location
+            _ = tower[0].th_umv(target=tower[2] + angle_adjust)
+
+            # Record the current rocking curve
+            tower[1][:] = [np.copy(angles1 - angle_adjust), np.square(np.abs(reflect_sigma1)) / np.abs(b_factor1)]
+            kin = np.copy(kout1[index])
+
+        # Align vcc2 and vcc3
+        # Fine adjustment according to dynamical diffraction theory
+        kin = np.copy(kout + self.g1.grating_1.momentum_transfer)
+        combo = [[self.t2, self.t2_rocking, bragg_list[1]],
+                 [self.t3, self.t3_rocking, bragg_list[2]], ]
+        for tower in combo:
+            # Step 2, get the rocking curve around the motion axis for the two crystals.
+            (angles1, reflect_sigma1,
+             reflect_pi1, b_factor1, kout1) = DeviceSimu.get_rocking_curve_channelcut_around_axis(
+                kin=kin,
+                scan_range=np.deg2rad(0.5),
+                scan_number=10 ** 4,
+                rotation_axis=tower[0].th.rotation_axis,
+                channelcut=tower[0].optics, )
+
+            # Get the target bragg peak
+            fwhm, angle_adjust, index = util.get_fwhm(coordinate=angles1,
+                                                      curve_values=np.square(np.abs(reflect_sigma1)),
+                                                      center=True,
+                                                      get_index=True)
+            # Move the crystal to the target location
+            _ = tower[0].th_umv(target=tower[2] + angle_adjust)
+
+            # Record the current rocking curve
+            tower[1][:] = [np.copy(angles1 - angle_adjust), np.square(np.abs(reflect_sigma1)) / np.abs(b_factor1)]
+            kin = np.copy(kout1[index])
+
+        # Align vcc4 and vcc5
+        # Fine adjustment according to dynamical diffraction theory
+        combo = [[self.t45.th1, self.t45.optics1, self.t45.th1_umv, self.t4_rocking, bragg_list[3]],
+                 [self.t45.th2, self.t45.optics2, self.t45.th2_umv, self.t5_rocking, bragg_list[4]], ]
+        for tower in combo:
+            # Step 2, get the rocking curve around the motion axis for the two crystals.
+            (angles1, reflect_sigma1,
+             reflect_pi1, b_factor1, kout1) = DeviceSimu.get_rocking_curve_channelcut_around_axis(
+                kin=kin,
+                scan_range=np.deg2rad(0.5),
+                scan_number=10 ** 4,
+                rotation_axis=tower[0].rotation_axis,
+                channelcut=tower[1])
+
+            # Get the target bragg peak
+            fwhm, angle_adjust, index = util.get_fwhm(coordinate=angles1,
+                                                      curve_values=np.square(np.abs(reflect_sigma1)),
+                                                      center=True,
+                                                      get_index=True)
+            # Move the crystal to the target location
+            _ = tower[2](target=tower[4] + angle_adjust)
+
+            # Record the current rocking curve
+            tower[3][:] = (np.copy(angles1 - angle_adjust), np.square(np.abs(reflect_sigma1)) / np.abs(b_factor1))
+            kin = np.copy(kout1[index])
+
+
+def plot_motors(self, ax):
+    for tower in self.all_towers:
+        for item in tower.all_motors:
+            ax.plot(item.boundary[:, 2] / 1000, item.boundary[:, 1] / 1000, c='black')
+
+
+def plot_optics(self, ax):
+    for tower in self.all_towers:
+        for item in tower.all_optics:
+            ax.plot(item.boundary[:, 2] / 1000, item.boundary[:, 1] / 1000, c='blue')
+
+
+def get_diode(self):
+    pass
+
+
+def get_camera(self):
+    pass
+
+
+def show_cc(self):
+    self.cc_shutter = True
+    self.vcc_shutter = False
+
+
+def show_vcc(self):
+    self.vcc_shutter = True
+    self.cc_shutter = False
+
+
+def show_both(self):
+    self.vcc_shutter = True
+    self.cc_shutter = True
+
+
+def show_neither(self):
+    self.vcc_shutter = False
+    self.cc_shutter = False
+
+# def save_operation_record(controller, file_name=None):
+#    if file_name is None:
+#        file_name = "~/Desktop/operation_record_{}.h5".format(util.time_stamp())
+#    with h5py.File(file_name, 'wb') as target:
+#        target.create_dataset(name='t1x', data=np.array(controller.record['t1x']))

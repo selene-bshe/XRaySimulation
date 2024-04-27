@@ -87,10 +87,10 @@ class ChannelCut:
                 crystal_property = pickle.load(handle)
 
         # Get wave-length
-        wave_length = 2 * np.pi / util.kev_to_wavevec_length(energy=energy_keV)
+        # wave_length = 2 * np.pi / util.kev_to_wavevec_length(energy=energy_keV)
 
         # Get geometric bragg angle
-        bragg_theta = util.get_bragg_angle(wave_length=wave_length, plane_distance=crystal_property['d'])
+        # bragg_theta = util.get_bragg_angle(wave_length=wave_length, plane_distance=crystal_property['d'])
 
         # Create 2 crystals
         self.crystal_list = [
