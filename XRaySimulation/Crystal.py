@@ -65,7 +65,7 @@ class ChannelCut:
         # Add a type to help functions to choose how to treat this object
         self.type = "Channel cut with two surfaces"
 
-        # The location of the first crystal determines which direction should the channel-cut rotate
+        # The path of the first crystal determines which direction should the channel-cut rotate
         self.first_crystal_loc = first_surface_loc
 
         # Rotation center
@@ -744,18 +744,19 @@ class TotalReflectionMirror:
 
     def rotate(self, rot_mat):
         # The shift of the space does not change the reciprocal lattice and the normal direction
+        self.surface_point = np.ascontiguousarray(rot_mat.dot(self.surface_point))
         self.normal = np.ascontiguousarray(rot_mat.dot(self.normal))
         self.boundary = np.asanyarray(np.dot(self.boundary, rot_mat.T))
 
     def rotate_wrt_point(self, rot_mat, ref_point):
         # Step 1: shift with respect to that point
-        self.shift(displacement=-ref_point)
+        self.shift(displacement=-np.copy(ref_point))
 
         # Step 2: rotate the quantities
         self.rotate(rot_mat=rot_mat)
 
         # Step 3: shift it back to the reference point
-        self.shift(displacement=ref_point)
+        self.shift(displacement=np.copy(ref_point))
 
 
 class Prism:

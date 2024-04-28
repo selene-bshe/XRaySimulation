@@ -998,10 +998,12 @@ def get_telescope_kout(optical_axis, kin):
 def get_mirror_kout(kin,
                     normal,
                     ):
-    # Get the projection of the kin along the direction of normal
-    # we always assume that the normal direction of the mirror is point towards the outer direction of the mirror
-    # Therefore the reflection is
-    # kout = kin - (kin . normal) normal
+    """
+    Assume that n is pointing to the inner side of the crystal
+    :param kin:
+    :param normal:
+    :return:
+    """
     proj_len = np.dot(kin, normal)
     kout = kin - normal * (2 * proj_len)
     return kout

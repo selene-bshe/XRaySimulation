@@ -1486,7 +1486,7 @@ def track_contour(fn='xleap_optimize.track', x='amp', y='r56', z='meanfw', bin1=
         if pp:
             plt.plot(dx, dy, 'k.', markersize=2)
         if x == 'modulation amplitude (MeV)' and y == '$R_{56}$ (mm)':
-            # plot expected location for good simulations to exist (i.e. produce peak current)
+            # plot expected path for good simulations to exist (i.e. produce peak current)
             x_arr = np.linspace(np.min(dx), np.max(dx), 200)
             dy_expected = float(get_input_param('base.in', 'gamma0')) / (x_arr / .511) * 2e-6 / (2 * np.pi) * 1e3
             plt.plot(x_arr, dy_expected, 'k-')

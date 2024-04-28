@@ -84,7 +84,7 @@ class XppController_TG:
 
         # Step 3 Move the devices to their rough position
 
-        # Step 4 Rotate the crystals such that they are at the ideal location
+        # Step 4 Rotate the crystals such that they are at the ideal path
 
         # Step 5 Add diodes
 
@@ -575,7 +575,7 @@ def get_optics(Ec=9.8):
                                            source=None,
                                            crystal_property=si220)
                         for _x in range(4)]
-    # Change the location of the crystals
+    # Change the path of the crystals
     for idx in range(4):
         vcc_channel_cuts[idx].shift(displacement=vcc_channel_cut_locations[idx])
 
@@ -710,6 +710,6 @@ def assemble_motors_and_optics(Ec=9.8):
                     "si": si,
                     'sample': sample}
 
-    # TODO: Need to specify the installation location with respect to the optical breadboard.
+    # TODO: Need to specify the installation path with respect to the optical breadboard.
 
     return motor_stacks, optics_all

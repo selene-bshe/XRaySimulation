@@ -110,7 +110,7 @@ class LinearMotor:
             # Step 2: if it is with in the limit, then consider the back-clash effect
             delta = target - self.control_location
             if delta * self.control_backlash <= 0:  # Move to the opposite direction as the back-clash direction
-                # Step 3: change the physical location
+                # Step 3: change the physical path
 
                 # Get the physical displacement of the table
                 physical_motion = delta + self.dp_resolution * (np.random.rand() - 0.5)
@@ -149,11 +149,11 @@ class LinearMotor:
                     print("Motor moved to {:.2f} um".format(self.control_location))
 
                 else:
-                    print("The target location {:.2f} um plus back clash is beyond the limit of this motor.".format(
+                    print("The target path {:.2f} um plus back clash is beyond the limit of this motor.".format(
                         target))
                     print("No motion is committed.")
         else:
-            print("The target location {:.2f} um is beyond the limit of this motor.".format(target))
+            print("The target path {:.2f} um is beyond the limit of this motor.".format(target))
             print("No motion is committed.")
 
         if getMotionTime:
@@ -279,11 +279,11 @@ class VerticalMotor:
                     self.location_feedback = self.location + self.feedback_noise
                     print("Motor moved to {:.2f} um".format(self.location_feedback))
                 else:
-                    print("The target location {:.2f} um plus back clash is beyond the limit of this motor.".format(
+                    print("The target path {:.2f} um plus back clash is beyond the limit of this motor.".format(
                         target))
                     print("No motion is committed.")
         else:
-            print("The target location {:.2f} um is beyond the limit of this motor.".format(target))
+            print("The target path {:.2f} um is beyond the limit of this motor.".format(target))
             print("No motion is committed.")
 
         if getMotionTime:
@@ -429,11 +429,11 @@ class RotationMotor:
                     self.location_feedback = self.location + self.feedback_noise
                     print("Motor moved to {:.2f} um".format(self.location_feedback))
                 else:
-                    print("The target location {:.2f} um plus back clash is beyond the limit of this motor.".format(
+                    print("The target path {:.2f} um plus back clash is beyond the limit of this motor.".format(
                         target))
                     print("No motion is committed.")
         else:
-            print("The target location {:.2f} um is beyond the limit of this motor.".format(target))
+            print("The target path {:.2f} um is beyond the limit of this motor.".format(target))
             print("No motion is committed.")
 
         if getMotionTime:
@@ -585,7 +585,7 @@ class SwivelMotor:
                     self.location_feedback = self.location + self.feedback_noise
                     print("Motor moved to {:.2f} um".format(self.location_feedback))
                 else:
-                    print("The target location {:.2f} um plus back clash is beyond the limit of this motor.".format(
+                    print("The target path {:.2f} um plus back clash is beyond the limit of this motor.".format(
                         target))
                     print("No motion is committed.")
 

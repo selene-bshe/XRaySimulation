@@ -134,7 +134,7 @@ class LinearMotor:
             # Step 2: if it is with in the limit, then consider the back-clash effect
             delta = target - self.control_location
             if delta * self.control_backlash <= 0:  # Move to the opposite direction as the back-clash direction
-                # Step 3: change the physical location
+                # Step 3: change the physical path
 
                 # Get the physical displacement of the table
                 physical_motion = delta + self.dp_resolution * (np.random.rand() - 0.5)
@@ -173,11 +173,11 @@ class LinearMotor:
                     print("Motor moved to {:.2f} um".format(self.control_location))
 
                 else:
-                    print("The target location {:.2f} um plus back clash is beyond the limit of this motor.".format(
+                    print("The target path {:.2f} um plus back clash is beyond the limit of this motor.".format(
                         target))
                     print("No motion is committed.")
         else:
-            print("The target location {:.2f} um is beyond the limit of this motor.".format(target))
+            print("The target path {:.2f} um is beyond the limit of this motor.".format(target))
             print("No motion is committed.")
 
         if getMotionTime:
@@ -329,11 +329,11 @@ class RotationMotor:
                     self.control_location = target + self.dp_feedback_noise_instance
                     print("Motor moved to {:.2f} rad".format(self.control_location))
                 else:
-                    print("The target location {:.2f} rad plus backlash is beyond the limit of this motor.".format(
+                    print("The target path {:.2f} rad plus backlash is beyond the limit of this motor.".format(
                         target))
                     print("No motion is committed.")
         else:
-            print("The target location {:.2f} um is beyond the limit of this motor.".format(target))
+            print("The target path {:.2f} um is beyond the limit of this motor.".format(target))
             print("No motion is committed.")
 
         if getMotionTime:
@@ -422,13 +422,13 @@ class CrystalTower_x_y_theta_chi:
         # ------------------------------------------
         self.x.physical_positive_direction = np.zeros(3, dtype=np.float64)
         self.x.physical_positive_direction[1] = 1.0  #
-        # Define the installation location of the x stage
+        # Define the installation path of the x stage
         x_stage_center = np.zeros(3, dtype=np.float64)
         self.x.shift(displacement=x_stage_center)
 
         self.y.physical_positive_direction = np.zeros(3, dtype=np.float64)
         self.y.physical_positive_direction[0] = 1.0  #
-        # Define the installation location of the x stage
+        # Define the installation path of the x stage
         y_stage_center = np.zeros(3, dtype=np.float64)
         y_stage_center[0] = 30 * 1000  # The height of the x stage.
         self.y.shift(displacement=y_stage_center)
@@ -439,7 +439,7 @@ class CrystalTower_x_y_theta_chi:
         self.th.physical_rotation_axis[0] = 1.0
         self.th.physical_rotation_center = np.zeros(3, dtype=np.float64)
 
-        # Define the installation location of the x stage
+        # Define the installation path of the x stage
         th_stage_center = np.zeros(3, dtype=np.float64)
         th_stage_center[0] = 30 * 1000 + 20 * 1000  # The height of the x stage + the height of the y stage
         self.th.shift(displacement=th_stage_center)
@@ -451,7 +451,7 @@ class CrystalTower_x_y_theta_chi:
         self.chi.physical_rotation_center = np.zeros(3, dtype=np.float64)
         self.chi.physical_rotation_center[0] = 70e3  # The rotation center of the chi stage is high in the air.
 
-        # Define the installation location of the x stage
+        # Define the installation path of the x stage
         chi_stage_center = np.zeros(3, dtype=np.float64)
         chi_stage_center[0] = 30 * 1000 + 20 * 1000 + 30e3  # The height of the x stage + the height of the y stage
         # + the height of the theta stage
@@ -593,10 +593,10 @@ class CrystalTower_miniSD_Scan:
         # ------------------------------------------
         # Change the motor configuration
         # ------------------------------------------
-        # Define the installation location of the tower with respect to that of the lowest X stage
+        # Define the installation path of the tower with respect to that of the lowest X stage
         self.x.physical_positive_direction = np.zeros(3, dtype=np.float64)
         self.x.physical_positive_direction[1] = 1.0  #
-        # Define the installation location of the x stage
+        # Define the installation path of the x stage
         x_stage_center = np.zeros(3, dtype=np.float64)
         self.x.shift(displacement=x_stage_center)
 
@@ -612,7 +612,7 @@ class CrystalTower_miniSD_Scan:
         self.th2.physical_rotation_axis[0] = 1.0
         self.th2.physical_rotation_center = np.zeros(3, dtype=np.float64)
 
-        # Define the installation location of the theta stage with respect to the X stage
+        # Define the installation path of the theta stage with respect to the X stage
         th_stage_center = np.zeros(3, dtype=np.float64)
         th_stage_center[0] = 30 * 1000 + 20 * 1000  # The height of the x stage
         th_stage_center[2] = -100e3
@@ -623,7 +623,7 @@ class CrystalTower_miniSD_Scan:
         th_stage_center[2] = 100e3
         self.th2.shift(displacement=th_stage_center)
 
-        # Define the installation location of the chi stage with respect to the x stage
+        # Define the installation path of the chi stage with respect to the x stage
         self.chi.physical_deg0direction = np.zeros(3, dtype=np.float64)
         self.chi.physical_deg0direction[0] = 1.0  #
         self.chi.physical_rotation_axis = np.zeros(3, dtype=np.float64)
@@ -631,14 +631,14 @@ class CrystalTower_miniSD_Scan:
         self.chi.physical_rotation_center = np.zeros(3, dtype=np.float64)
         self.chi.physical_rotation_center[0] = 70e3  # The rotation center of the chi stage is high in the air.
 
-        # Define the installation location of the x stage
+        # Define the installation path of the x stage
         chi_stage_center = np.zeros(3, dtype=np.float64)
         chi_stage_center[0] = 30 * 1000 + 20 * 1000 + 30e3  # The height of the x stage + the height of the y stage
         chi_stage_center[2] = -100e3  # The height of the x stage + the height of the y stage
         # + the height of the theta stage
         self.chi.shift(displacement=chi_stage_center)
 
-        # Define the installation location of the x stage
+        # Define the installation path of the x stage
         self.x1.physical_positive_direction = np.zeros(3, dtype=np.float64)
         self.x1.physical_positive_direction[1] = 1.0  #
 
@@ -795,13 +795,13 @@ class Grating_tower:
         # ------------------------------------------
         self.x.physical_positive_direction = np.zeros(3, dtype=np.float64)
         self.x.physical_positive_direction[1] = 1.0  #
-        # Define the installation location of the x stage
+        # Define the installation path of the x stage
         x_stage_center = np.zeros(3, dtype=np.float64)
         self.x.shift(displacement=x_stage_center)
 
         self.y.physical_positive_direction = np.zeros(3, dtype=np.float64)
         self.y.physical_positive_direction[0] = 1.0  #
-        # Define the installation location of the x stage
+        # Define the installation path of the x stage
         y_stage_center = np.zeros(3, dtype=np.float64)
         y_stage_center[0] = 30 * 1000  # The height of the x stage.
         self.y.shift(displacement=y_stage_center)
@@ -812,7 +812,7 @@ class Grating_tower:
         self.pi.physical_rotation_axis[0] = 1.0
         self.pi.physical_rotation_center = np.zeros(3, dtype=np.float64)
 
-        # Define the installation location of the x stage
+        # Define the installation path of the x stage
         pi_stage_center = np.zeros(3, dtype=np.float64)
         pi_stage_center[0] = 30 * 1000 + 20 * 1000  # The height of the x stage + the height of the y stage
         self.pi.shift(displacement=pi_stage_center)
@@ -824,7 +824,7 @@ class Grating_tower:
         self.roll.physical_rotation_center = np.zeros(3, dtype=np.float64)
         self.roll.physical_rotation_center[1] = 70e3  # The rotation center of the chi stage is high in the air.
 
-        # Define the installation location of the x stage
+        # Define the installation path of the x stage
         roll_stage_center = np.zeros(3, dtype=np.float64)
         roll_stage_center[0] = 30 * 1000 + 20 * 1000 + 30e3  # The height of the x stage + the height of the y stage
         # + the height of the theta stage
@@ -837,7 +837,7 @@ class Grating_tower:
         self.yaw.physical_rotation_center = np.zeros(3, dtype=np.float64)
         self.yaw.physical_rotation_center[1] = 70e3  # The rotation center of the chi stage is high in the air.
 
-        # Define the installation location of the x stage
+        # Define the installation path of the x stage
         yaw_stage_center = np.zeros(3, dtype=np.float64)
         yaw_stage_center[0] = 30 * 1000 + 20 * 1000 + 30e3  # The height of the x stage + the height of the y stage
         # + the height of the theta stage
@@ -975,13 +975,13 @@ class Mirror_tower1:
         # ------------------------------------------
         self.x.physical_positive_direction = np.zeros(3, dtype=np.float64)
         self.x.physical_positive_direction[1] = 1.0  #
-        # Define the installation location of the x stage
+        # Define the installation path of the x stage
         x_stage_center = np.zeros(3, dtype=np.float64)
         self.x.shift(displacement=x_stage_center)
 
         self.y.physical_positive_direction = np.zeros(3, dtype=np.float64)
         self.y.physical_positive_direction[0] = 1.0  #
-        # Define the installation location of the x stage
+        # Define the installation path of the x stage
         y_stage_center = np.zeros(3, dtype=np.float64)
         y_stage_center[0] = 30 * 1000  # The height of the x stage.
         self.y.shift(displacement=y_stage_center)
@@ -993,7 +993,7 @@ class Mirror_tower1:
         self.pi.physical_rotation_center = np.zeros(3, dtype=np.float64)
         self.pi.physical_rotation_center[0] = 70e3  # The rotation center of the chi stage is high in the air.
 
-        # Define the installation location of the x stage
+        # Define the installation path of the x stage
         pi_stage_center = np.zeros(3, dtype=np.float64)
         pi_stage_center[0] = 30 * 1000 + 20 * 1000 + 30e3  # The height of the x stage + the height of the y stage
         # + the height of the theta stage
@@ -1091,13 +1091,13 @@ class Mirror_tower2:
         # ------------------------------------------
         self.z.physical_positive_direction = np.zeros(3, dtype=np.float64)
         self.z.physical_positive_direction[1] = 1.0  #
-        # Define the installation location of the x stage
+        # Define the installation path of the x stage
         z_stage_center = np.zeros(3, dtype=np.float64)
         self.z.shift(displacement=z_stage_center)
 
         self.y.physical_positive_direction = np.zeros(3, dtype=np.float64)
         self.y.physical_positive_direction[0] = 1.0  #
-        # Define the installation location of the x stage
+        # Define the installation path of the x stage
         y_stage_center = np.zeros(3, dtype=np.float64)
         y_stage_center[0] = 30 * 1000  # The height of the x stage.
         self.y.shift(displacement=y_stage_center)
@@ -1109,7 +1109,7 @@ class Mirror_tower2:
         self.yaw.physical_rotation_center = np.zeros(3, dtype=np.float64)
         self.yaw.physical_rotation_center[0] = 70e3  # The rotation center of the chi stage is high in the air.
 
-        # Define the installation location of the x stage
+        # Define the installation path of the x stage
         yaw_stage_center = np.zeros(3, dtype=np.float64)
         yaw_stage_center[0] = 30 * 1000 + 20 * 1000 + 30e3  # The height of the x stage + the height of the y stage
         # + the height of the theta stage
@@ -1224,19 +1224,19 @@ class Silicon_tower:
         # ------------------------------------------
         self.z.physical_positive_direction = np.zeros(3, dtype=np.float64)
         self.z.physical_positive_direction[2] = 1.0  #
-        # Define the installation location of the x stage
+        # Define the installation path of the x stage
         x_stage_center = np.zeros(3, dtype=np.float64)
         self.z.shift(displacement=x_stage_center)
 
         self.x.physical_positive_direction = np.zeros(3, dtype=np.float64)
         self.x.physical_positive_direction[1] = 1.0  #
-        # Define the installation location of the x stage
+        # Define the installation path of the x stage
         x_stage_center = np.zeros(3, dtype=np.float64)
         self.x.shift(displacement=x_stage_center)
 
         self.y.physical_positive_direction = np.zeros(3, dtype=np.float64)
         self.y.physical_positive_direction[0] = 1.0  #
-        # Define the installation location of the x stage
+        # Define the installation path of the x stage
         y_stage_center = np.zeros(3, dtype=np.float64)
         y_stage_center[0] = 30 * 1000  # The height of the x stage.
         self.y.shift(displacement=y_stage_center)
@@ -1247,7 +1247,7 @@ class Silicon_tower:
         self.roll.physical_rotation_axis[0] = 1.0
         self.roll.physical_rotation_center = np.zeros(3, dtype=np.float64)
 
-        # Define the installation location of the x stage
+        # Define the installation path of the x stage
         roll_stage_center = np.zeros(3, dtype=np.float64)
         roll_stage_center[0] = 30 * 1000 + 20 * 1000  # The height of the x stage + the height of the y stage
         self.roll.shift(displacement=roll_stage_center)
@@ -1259,7 +1259,7 @@ class Silicon_tower:
         self.pi.physical_rotation_center = np.zeros(3, dtype=np.float64)
         self.pi.physical_rotation_center[0] = 70e3  # The rotation center of the chi stage is high in the air.
 
-        # Define the installation location of the x stage
+        # Define the installation path of the x stage
         pi_stage_center = np.zeros(3, dtype=np.float64)
         pi_stage_center[0] = 30 * 1000 + 20 * 1000 + 30e3  # The height of the x stage + the height of the y stage
         # + the height of the theta stage
@@ -1331,7 +1331,7 @@ class Silicon_tower:
 class TG_Sample_tower:
     """
     This class is probability only useful for the TG experiment.
-    Therefore, when initializing this class, I do not allow for an arbitrary crystal location
+    Therefore, when initializing this class, I do not allow for an arbitrary crystal path
     since there is almost no possibility of using this for a new application.
     """
 
@@ -1384,20 +1384,20 @@ class TG_Sample_tower:
         # ------------------------------------------
         self.x.physical_positive_direction = np.zeros(3, dtype=np.float64)
         self.x.physical_positive_direction[1] = 1.0  #
-        # Define the installation location of the x stage
+        # Define the installation path of the x stage
         x_stage_center = np.zeros(3, dtype=np.float64)
         self.x.shift(displacement=x_stage_center)
 
         self.y.physical_positive_direction = np.zeros(3, dtype=np.float64)
         self.y.physical_positive_direction[0] = 1.0  #
-        # Define the installation location of the x stage
+        # Define the installation path of the x stage
         y_stage_center = np.zeros(3, dtype=np.float64)
         y_stage_center[0] = 30 * 1000  # The height of the x stage.
         self.y.shift(displacement=y_stage_center)
 
         self.z.physical_positive_direction = np.zeros(3, dtype=np.float64)
         self.z.physical_positive_direction[0] = 1.0  #
-        # Define the installation location of the x stage
+        # Define the installation path of the x stage
         z_stage_center = np.zeros(3, dtype=np.float64)
         z_stage_center[0] = 30 * 1000  # The height of the x stage.
         self.z.shift(displacement=z_stage_center)
@@ -1408,7 +1408,7 @@ class TG_Sample_tower:
         self.th.physical_rotation_axis[0] = 1.0
         self.th.physical_rotation_center = np.zeros(3, dtype=np.float64)
 
-        # Define the installation location of the x stage
+        # Define the installation path of the x stage
         th_stage_center = np.zeros(3, dtype=np.float64)
         th_stage_center[0] = 30 * 1000 + 20 * 1000  # The height of the x stage + the height of the y stage
         self.th.shift(displacement=th_stage_center)

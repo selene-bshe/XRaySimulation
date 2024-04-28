@@ -46,23 +46,24 @@ def get_optics():
     # Define gratings
     g1_cc = Crystal.RectangleGrating(a=g1_period / 2.,
                                      b=g1_period / 2.,
-                                     direction=np.zeros(3),
+                                     direction=np.array([1., 0., 0.], dtype=np.float64),
                                      surface_point=np.zeros(3),
                                      order=1.)
+
     g1_vcc = Crystal.RectangleGrating(a=g1_period / 2.,
                                       b=g1_period / 2.,
-                                      direction=np.zeros(3),
+                                      direction=np.array([1., 0., 0.], dtype=np.float64),
                                       surface_point=np.zeros(3),
                                       order=-1.)
 
     g2_cc = Crystal.RectangleGrating(a=g2_period / 2.,
                                      b=g2_period / 2.,
-                                     direction=np.zeros(3),
+                                     direction=np.array([0., 1., 0.], dtype=np.float64),
                                      surface_point=np.zeros(3),
                                      order=-1.)
     g2_vcc = Crystal.RectangleGrating(a=g2_period / 2.,
                                       b=g2_period / 2.,
-                                      direction=np.zeros(3),
+                                      direction=np.array([0., 1., 0.], dtype=np.float64),
                                       surface_point=np.zeros(3),
                                       order=1.)
 
@@ -70,15 +71,15 @@ def get_optics():
                                       b=tg_g_period / 2.,
                                       surface_point=np.zeros(3),
                                       order=1.)
+
     tg_g_b = Crystal.RectangleGrating(a=tg_g_period / 2.,
                                       b=tg_g_period / 2.,
                                       surface_point=np.zeros(3),
                                       order=-1.)
 
     # Define total reflection mirrors
-    tg_mirror_pump_a = Crystal.TotalReflectionMirror(surface_point=np.zeros(3), normal=np.array([0, 1.0, 0]))
-    tg_mirror_pump_b = Crystal.TotalReflectionMirror(surface_point=np.zeros(3), normal=np.array([0, -1.0, 0]))
-
+    tg_mirror_pump_a = Crystal.TotalReflectionMirror(surface_point=np.zeros(3), normal=np.array([-1.0, 0, 0]))
+    tg_mirror_pump_b = Crystal.TotalReflectionMirror(surface_point=np.zeros(3), normal=np.array([-1.0, 0.0, 0]))
     tg_mirror_probe = Crystal.TotalReflectionMirror(surface_point=np.zeros(3), normal=np.array([-1.0, 0, 0]))
 
     # ------------------------------------------
@@ -120,7 +121,7 @@ def get_optics():
                         for _x in range(4)]
     # Shift the crystal such that the rotation center is at 0
     vcc_channel_cuts[1].shift(displacement=np.copy(vcc_channel_cuts[1].crystal_list[1].surface_point))
-    vcc_channel_cuts[1].shift(displacement=np.copy(vcc_channel_cuts[3].crystal_list[1].surface_point))
+    vcc_channel_cuts[3].shift(displacement=np.copy(vcc_channel_cuts[3].crystal_list[1].surface_point))
 
     # --------------------------------------------------
     #   Get CC
@@ -145,8 +146,8 @@ def get_optics():
     cc_channel_cuts[1].shift(displacement=np.copy(vcc_channel_cuts[1].crystal_list[1].surface_point))
 
     # Get the silicon 111 for the TG probe
-    tg_si111 = Crystal.CrystalBlock3D(h=np.array([- np.pi * 2 / si111['d'], 0, 0], dtype=np.float64),
-                                      normal=np.array([1., 0, 0.]),
+    tg_si111 = Crystal.CrystalBlock3D(h=np.array([np.pi * 2 / si111['d'], 0, 0], dtype=np.float64),
+                                      normal=np.array([-1., 0, 0.]),
                                       surface_point=np.zeros(3),
                                       thickness=1e4,
                                       chi_dict=si111,
@@ -213,10 +214,10 @@ def assemble_motors_and_optics():
                                            crystal_loc=np.copy(optics_all['vcc1'].crystal_list[0].surface_point, ))
     t3 = Motors.CrystalTower_x_y_theta_chi(crystal=optics_all['vcc2'],
                                            crystal_loc=np.copy(optics_all['vcc2'].crystal_list[1].surface_point, ))
-    t45 = Motors.CrystalTower_miniSD_Scan(channelCut2=optics_all['vcc3'],
-                                          crystal_loc2=np.copy(optics_all['vcc3'].crystal_list[0].surface_point, ),
-                                          channelCut1=optics_all['vcc4'],
-                                          crystal_loc1=np.copy(optics_all['vcc4'].crystal_list[1].surface_point, ),
+    t45 = Motors.CrystalTower_miniSD_Scan(channelCut1=optics_all['vcc3'],
+                                          crystal_loc1=np.copy(optics_all['vcc3'].crystal_list[0].surface_point, ),
+                                          channelCut2=optics_all['vcc4'],
+                                          crystal_loc2=np.copy(optics_all['vcc4'].crystal_list[1].surface_point, ),
                                           )
 
     # Get the grating tower
@@ -287,7 +288,7 @@ class XppController_TG:
                                                  sigma_x=fwhm / 2. / np.sqrt(np.log(2)) / util.c,
                                                  sigma_y=fwhm / 2. / np.sqrt(np.log(2)) / util.c,
                                                  sigma_z=9.,
-                                                 x0=np.array([0., 0., -30e6]))
+                                                 x0=np.array([0., -500e3, -30e6]))
         self.wavelength = np.pi * 2 / util.kev_to_wavevec_length(energy=photon_kev)
 
         # Step 1 Create all the optics and motors
@@ -320,18 +321,17 @@ class XppController_TG:
                            self.m1, self.m2a, self.m2b, self.si, self.sample, ]
 
         # Insatll the XPP mono
-        bragg = util.get_bragg_angle(wave_length=self.wavelength, plane_distance=3.1355 * 1e-4)
+        bragg = util.get_bragg_angle(wave_length=self.wavelength, plane_distance=dia111['d'])
         # Assume that the gap size is 50 cm, then the z offset is gap / np.tan(2 * bragg)
-        gap = 50e3
+        gap = 500e3
         z_offset = gap / np.tan(2 * bragg)
 
         # Shift the pulse and mono tower 1
         displacement = np.array([0, -gap, -z_offset], dtype=np.float64)
-        self.gaussian_pulse.shift(displacement=displacement)
         for item in self.mono_t1.all_obj:
             item.shift(displacement=displacement)
 
-        # Shift the installation location of the xpp mono
+        # Shift the installation path of the xpp mono
         displacement = np.array([0, 0, -10e6], dtype=np.float64)
         for item in self.mono_t1.all_obj:
             item.shift(displacement=displacement)
@@ -364,9 +364,9 @@ class XppController_TG:
         # Install sample table
         self.breadboard3.shift(displacement=np.array([-254e3, -212.5e3, 7e6]))
         Motors.install_motors_on_breadboard(motor_stack=self.m2a.all_obj, breadboard=self.breadboard3,
-                                            diag_hole_idx1=(0, 0), diag_hole_idx2=(4, 12))
+                                            diag_hole_idx1=(0, 7), diag_hole_idx2=(4, 19))
         Motors.install_motors_on_breadboard(motor_stack=self.m2b.all_obj, breadboard=self.breadboard3,
-                                            diag_hole_idx1=(13, 0), diag_hole_idx2=(17, 12))
+                                            diag_hole_idx1=(13, 7), diag_hole_idx2=(17, 19))
         Motors.install_motors_on_breadboard(motor_stack=self.sample.all_obj, breadboard=self.breadboard3,
                                             diag_hole_idx1=(5, 23), diag_hole_idx2=(8, 28))
         Motors.install_motors_on_breadboard(motor_stack=self.si.all_obj, breadboard=self.breadboard3,
@@ -417,7 +417,7 @@ class XppController_TG:
         # Get the geometry bragg angle
         bragg = util.get_bragg_angle(wave_length=np.pi * 2 / self.gaussian_pulse.klen0, plane_distance=dia111['d'])
 
-        # Step 1, move the mono1 th to the geometric location
+        # Step 1, move the mono1 th to the geometric path
         _ = self.mono_t1.th_umv(target=-bragg)
         _ = self.mono_t2.th_umv(target=-bragg)
 
@@ -439,7 +439,7 @@ class XppController_TG:
                                                   center=True,
                                                   get_index=True)
 
-        # Move the crystal to the target location
+        # Move the crystal to the target path
         _ = self.mono_t1.th_umv(target=-bragg + angle_adjust)
 
         # Align the second crystal
@@ -466,6 +466,18 @@ class XppController_TG:
         self.mono_t1_rocking = [angles1 - angle_adjust, np.square(np.abs(reflect_sigma1)) / np.abs(b_factor1)]
         self.mono_t2_rocking = [angles2 - angle_adjust2, np.square(np.abs(reflect_sigma2)) / np.abs(b_factor2)]
 
+        # Adjust the path of the XPP mono such that the exit X x-ray pulse is at the (0,0, ...)
+        # on the second crystal
+        trajectory, kout, _ = self.get_raytracing_trajectory(path='mono')
+        # Get the ideal location of the second crsytal
+        dir = kout[-2] / np.linalg.norm(kout[-2])
+        location = dir * (0 - self.gaussian_pulse.x0[1]) / dir[1]
+        # print(location)
+        location += trajectory[-3]
+        displacement = location - self.mono_t2.optics.surface_point
+        for item in self.mono_t2.all_obj:
+            item.shift(displacement=np.copy(displacement))
+
         return ((angles1 + angle_adjust, np.square(np.abs(reflect_sigma1)) / np.abs(b_factor1), kout1),
                 (angles2 + angle_adjust2, np.square(np.abs(reflect_sigma2)) / np.abs(b_factor2), kout2),)
 
@@ -481,9 +493,9 @@ class XppController_TG:
 
         # Get the geometry bragg angle
         bragg = util.get_bragg_angle(wave_length=np.pi * 2 / self.gaussian_pulse.klen0, plane_distance=si220['d'])
-        bragg_list = [bragg, -bragg, bragg, -bragg, bragg, -bragg]
+        bragg_list = [bragg, -bragg, bragg, bragg, -bragg, -bragg]
 
-        # Step 1, move the mono1 th to the geometric location
+        # Step 1, move the mono1 th to the geometric path
         _ = self.t1.th_umv(target=bragg_list[0])
         _ = self.t2.th_umv(target=bragg_list[1])
         _ = self.t3.th_umv(target=bragg_list[2])
@@ -510,7 +522,7 @@ class XppController_TG:
                                                       curve_values=np.square(np.abs(reflect_sigma1)),
                                                       center=True,
                                                       get_index=True)
-            # Move the crystal to the target location
+            # Move the crystal to the target path
             _ = tower[0].th_umv(target=tower[2] + angle_adjust)
 
             # Record the current rocking curve
@@ -537,7 +549,7 @@ class XppController_TG:
                                                       curve_values=np.square(np.abs(reflect_sigma1)),
                                                       center=True,
                                                       get_index=True)
-            # Move the crystal to the target location
+            # Move the crystal to the target path
             _ = tower[0].th_umv(target=tower[2] + angle_adjust)
 
             # Record the current rocking curve
@@ -563,55 +575,140 @@ class XppController_TG:
                                                       curve_values=np.square(np.abs(reflect_sigma1)),
                                                       center=True,
                                                       get_index=True)
-            # Move the crystal to the target location
+            # Move the crystal to the target path
             _ = tower[2](target=tower[4] + angle_adjust)
 
             # Record the current rocking curve
             tower[3][:] = (np.copy(angles1 - angle_adjust), np.square(np.abs(reflect_sigma1)) / np.abs(b_factor1))
             kin = np.copy(kout1[index])
 
+    def get_raytracing_trajectory(self, path="mono", get_path_length='False'):
+        if path == "mono":
+            defice_list = [self.mono_t1.optics, self.mono_t2.optics]
+            trajectory, kout, pathlength = DeviceSimu.get_lightpath(device_list=defice_list,
+                                                                    kin=self.gaussian_pulse.k0,
+                                                                    initial_point=self.gaussian_pulse.x0,
+                                                                    final_plane_point=np.array([0, 0, -7e6]),
+                                                                    final_plane_normal=np.array([0, 0, -1]))
 
-def plot_motors(self, ax):
-    for tower in self.all_towers:
-        for item in tower.all_motors:
-            ax.plot(item.boundary[:, 2] / 1000, item.boundary[:, 1] / 1000, c='black')
+        elif path == "mono SD m1 yag":
+            defice_list = ([self.mono_t1.optics, self.mono_t2.optics, self.g1.grating_1]
+                           + self.t2.optics.crystal_list + self.t3.optics.crystal_list
+                           + self.t45.optics1.crystal_list + self.t45.optics2.crystal_list
+                           + [self.m1.optics, self.sample.yag1])
+            trajectory, kout, pathlength = DeviceSimu.get_lightpath(device_list=defice_list,
+                                                                    kin=self.gaussian_pulse.k0,
+                                                                    initial_point=self.gaussian_pulse.x0,
+                                                                    final_plane_point=np.copy(
+                                                                        self.sample.yag1.surface_point),
+                                                                    final_plane_normal=np.copy(self.sample.yag1.normal))
+        elif path == "mono SD m1 si yag":
+            defice_list = ([self.mono_t1.optics, self.mono_t2.optics, self.g1.grating_1]
+                           + self.t2.optics.crystal_list + self.t3.optics.crystal_list
+                           + self.t45.optics1.crystal_list + self.t45.optics2.crystal_list
+                           + [self.m1.optics, self.si.optics, self.sample.yag1])
+            trajectory, kout, pathlength = DeviceSimu.get_lightpath(device_list=defice_list,
+                                                                    kin=self.gaussian_pulse.k0,
+                                                                    initial_point=self.gaussian_pulse.x0,
+                                                                    final_plane_point=np.copy(
+                                                                        self.sample.yag1.surface_point),
+                                                                    final_plane_normal=np.copy(self.sample.yag1.normal))
+        elif path == "mono SD yag":
+            defice_list = ([self.mono_t1.optics, self.mono_t2.optics, self.g1.grating_m1]
+                           + self.t1.optics.crystal_list + self.t6.optics.crystal_list
+                           + [self.sample.yag1, ])
+            trajectory, kout, pathlength = DeviceSimu.get_lightpath(device_list=defice_list,
+                                                                    kin=self.gaussian_pulse.k0,
+                                                                    initial_point=self.gaussian_pulse.x0,
+                                                                    final_plane_point=np.copy(
+                                                                        self.sample.yag1.surface_point),
+                                                                    final_plane_normal=np.copy(self.sample.yag1.normal))
 
 
-def plot_optics(self, ax):
-    for tower in self.all_towers:
-        for item in tower.all_optics:
-            ax.plot(item.boundary[:, 2] / 1000, item.boundary[:, 1] / 1000, c='blue')
+        elif path == "mono SD tga yag":
+            defice_list = ([self.mono_t1.optics, self.mono_t2.optics, self.g1.grating_m1]
+                           + self.t1.optics.crystal_list + self.t6.optics.crystal_list
+                           + [self.tg_g.grating_m1, self.sample.yag1])
+            trajectory, kout, pathlength = DeviceSimu.get_lightpath(device_list=defice_list,
+                                                                    kin=self.gaussian_pulse.k0,
+                                                                    initial_point=self.gaussian_pulse.x0,
+                                                                    final_plane_point=np.copy(
+                                                                        self.sample.yag1.surface_point),
+                                                                    final_plane_normal=np.copy(self.sample.yag1.normal))
 
+        elif path == "mono SD tga m2a yag":
+            defice_list = ([self.mono_t1.optics, self.mono_t2.optics, self.g1.grating_m1]
+                           + self.t1.optics.crystal_list + self.t6.optics.crystal_list
+                           + [self.tg_g.grating_m1, self.m2a.optics, self.sample.yag1])
+            trajectory, kout, pathlength = DeviceSimu.get_lightpath(device_list=defice_list,
+                                                                    kin=self.gaussian_pulse.k0,
+                                                                    initial_point=self.gaussian_pulse.x0,
+                                                                    final_plane_point=np.copy(
+                                                                        self.sample.yag1.surface_point),
+                                                                    final_plane_normal=np.copy(self.sample.yag1.normal))
+        elif path == "mono SD tgb yag":
+            defice_list = ([self.mono_t1.optics, self.mono_t2.optics, self.g1.grating_m1]
+                           + self.t1.optics.crystal_list + self.t6.optics.crystal_list
+                           + [self.tg_g.grating_1, self.sample.yag1])
+            trajectory, kout, pathlength = DeviceSimu.get_lightpath(device_list=defice_list,
+                                                                    kin=self.gaussian_pulse.k0,
+                                                                    initial_point=self.gaussian_pulse.x0,
+                                                                    final_plane_point=np.copy(
+                                                                        self.sample.yag1.surface_point),
+                                                                    final_plane_normal=np.copy(self.sample.yag1.normal))
+        elif path == "mono SD tgb m2b yag":
+            defice_list = ([self.mono_t1.optics, self.mono_t2.optics, self.g1.grating_m1]
+                           + self.t1.optics.crystal_list + self.t6.optics.crystal_list
+                           + [self.tg_g.grating_1, self.m2b.optics, self.sample.yag1])
+            trajectory, kout, pathlength = DeviceSimu.get_lightpath(device_list=defice_list,
+                                                                    kin=self.gaussian_pulse.k0,
+                                                                    initial_point=self.gaussian_pulse.x0,
+                                                                    final_plane_point=np.copy(
+                                                                        self.sample.yag1.surface_point),
+                                                                    final_plane_normal=np.copy(self.sample.yag1.normal))
+        else:
+            trajectory = 0
+            kout = 0
+            pathlength = 0
+        if get_path_length:
+            return trajectory, kout, pathlength
+        else:
+            return trajectory, kout
 
-def get_diode(self):
-    pass
+    def plot_motors(self, ax, color='black'):
+        for tower in self.all_towers:
+            for item in tower.all_motors:
+                ax.plot(item.boundary[:, 2] / 1000, item.boundary[:, 1] / 1000, c=color)
 
+    def plot_optics(self, ax, color='black'):
+        for tower in self.all_towers:
+            for item in tower.all_optics:
+                ax.plot(item.boundary[:, 2] / 1000, item.boundary[:, 1] / 1000, c=color)
 
-def get_camera(self):
-    pass
+    def get_diode(self):
+        pass
 
+    def get_camera(self):
+        pass
 
-def show_cc(self):
-    self.cc_shutter = True
-    self.vcc_shutter = False
+    def show_cc(self):
+        self.cc_shutter = True
+        self.vcc_shutter = False
 
+    def show_vcc(self):
+        self.vcc_shutter = True
+        self.cc_shutter = False
 
-def show_vcc(self):
-    self.vcc_shutter = True
-    self.cc_shutter = False
+    def show_both(self):
+        self.vcc_shutter = True
+        self.cc_shutter = True
 
+    def show_neither(self):
+        self.vcc_shutter = False
+        self.cc_shutter = False
 
-def show_both(self):
-    self.vcc_shutter = True
-    self.cc_shutter = True
-
-
-def show_neither(self):
-    self.vcc_shutter = False
-    self.cc_shutter = False
-
-# def save_operation_record(controller, file_name=None):
-#    if file_name is None:
-#        file_name = "~/Desktop/operation_record_{}.h5".format(util.time_stamp())
-#    with h5py.File(file_name, 'wb') as target:
-#        target.create_dataset(name='t1x', data=np.array(controller.record['t1x']))
+    # def save_operation_record(controller, file_name=None):
+    #    if file_name is None:
+    #        file_name = "~/Desktop/operation_record_{}.h5".format(util.time_stamp())
+    #    with h5py.File(file_name, 'wb') as target:
+    #        target.create_dataset(name='t1x', data=np.array(controller.record['t1x']))

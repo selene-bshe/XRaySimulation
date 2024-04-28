@@ -21,7 +21,6 @@ I am keeping this old function however for multiple reasons.
 """
 
 
-
 def prepare_beam_optics(g1_position=2e6,
                         g2_position=3e6,
                         g1_g2_period=1.0,
@@ -174,7 +173,7 @@ def prepare_beam_optics(g1_position=2e6,
                                            source=None,
                                            crystal_property=crystal_property)
                         for _x in range(4)]
-    # Change the location of the crystals
+    # Change the path of the crystals
     for idx in range(4):
         vcc_channel_cuts[idx].shift(displacement=vcc_channel_cut_locations[idx])
 
@@ -216,7 +215,7 @@ def prepare_beam_optics(g1_position=2e6,
                        for _x in range(2)]
 
     # ------------------------------------------------------------------------------------
-    # Change location of CC crystals
+    # Change path of CC crystals
     for idx in range(2):
         cc_channel_cuts[idx].shift(displacement=cc_channel_cut_locations[idx])
 

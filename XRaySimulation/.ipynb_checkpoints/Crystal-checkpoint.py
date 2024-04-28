@@ -65,7 +65,7 @@ class ChannelCut:
         # Add a type to help functions to choose how to treat this object
         self.type = "Channel cut with two surfaces"
 
-        # The location of the first crystal determines which direction should the channel-cut rotate
+        # The path of the first crystal determines which direction should the channel-cut rotate
         self.first_crystal_loc = first_surface_loc
 
         if source == "x-server":
