@@ -2,14 +2,9 @@
 This notebook tries to mimic the installation condition of the setup.
 """
 
-import os
-
 import numpy as np
 
 import sys
-import h5py
-
-import Projects.L10237_and_AutoAlign.notebook_v2.MotorStack
 
 sys.path.append("../../../../XRaySimulation")
 
@@ -17,7 +12,7 @@ from XRaySimulation import Crystal, DeviceSimu, util, Pulse
 from XRaySimulation.Machine import Motors, ScintillatorCamera
 
 # The following modules are loaded as a temporary solution
-import rayTracingCalculation
+import MotorStack
 
 si220 = {'d': 1.9201 * 1e-4,
          "chi0": complex(-0.10169E-04, 0.16106E-06),
@@ -204,53 +199,53 @@ def assemble_motors_and_optics():
     optics_all = get_optics()
 
     # Get the XPP mono
-    monoT1 = Projects.L10237_and_AutoAlign.notebook_v2.MotorStack.CrystalTower_x_y_theta_chi(crystal=optics_all['xpp mono'][0],
-                                                                                             crystal_loc=np.copy(optics_all['xpp mono'][0].surface_point, ))
+    monoT1 = MotorStack.CrystalTower_x_y_theta_chi(crystal=optics_all['xpp mono'][0],
+                                                   crystal_loc=np.copy(optics_all['xpp mono'][0].surface_point, ))
 
-    monoT2 = Projects.L10237_and_AutoAlign.notebook_v2.MotorStack.CrystalTower_x_y_theta_chi(crystal=optics_all['xpp mono'][1],
-                                                                                             crystal_loc=np.copy(optics_all['xpp mono'][1].surface_point, ))
+    monoT2 = MotorStack.CrystalTower_x_y_theta_chi(crystal=optics_all['xpp mono'][1],
+                                                   crystal_loc=np.copy(optics_all['xpp mono'][1].surface_point, ))
     # Get all the motors
-    t1 = Projects.L10237_and_AutoAlign.notebook_v2.MotorStack.CrystalTower_x_y_theta_chi(crystal=optics_all['cc1'],
-                                                                                         crystal_loc=np.copy(optics_all['cc1'].crystal_list[0].surface_point, ))
-    t6 = Projects.L10237_and_AutoAlign.notebook_v2.MotorStack.CrystalTower_x_y_theta_chi(crystal=optics_all['cc2'],
-                                                                                         crystal_loc=np.copy(optics_all['cc2'].crystal_list[1].surface_point, ))
+    t1 = MotorStack.CrystalTower_x_y_theta_chi(crystal=optics_all['cc1'],
+                                               crystal_loc=np.copy(optics_all['cc1'].crystal_list[0].surface_point, ))
+    t6 = MotorStack.CrystalTower_x_y_theta_chi(crystal=optics_all['cc2'],
+                                               crystal_loc=np.copy(optics_all['cc2'].crystal_list[1].surface_point, ))
 
     # For the VCC branch
-    t2 = Projects.L10237_and_AutoAlign.notebook_v2.MotorStack.CrystalTower_x_y_theta_chi(crystal=optics_all['vcc1'],
-                                                                                         crystal_loc=np.copy(optics_all['vcc1'].crystal_list[0].surface_point, ))
-    t3 = Projects.L10237_and_AutoAlign.notebook_v2.MotorStack.CrystalTower_x_y_theta_chi(crystal=optics_all['vcc2'],
-                                                                                         crystal_loc=np.copy(optics_all['vcc2'].crystal_list[1].surface_point, ))
-    t45 = Projects.L10237_and_AutoAlign.notebook_v2.MotorStack.CrystalTower_miniSD_Scan(channelCut1=optics_all['vcc3'],
-                                                                                        crystal_loc1=np.copy(optics_all['vcc3'].crystal_list[0].surface_point, ),
-                                                                                        channelCut2=optics_all['vcc4'],
-                                                                                        crystal_loc2=np.copy(optics_all['vcc4'].crystal_list[1].surface_point, ),
-                                                                                        )
+    t2 = MotorStack.CrystalTower_x_y_theta_chi(crystal=optics_all['vcc1'],
+                                               crystal_loc=np.copy(optics_all['vcc1'].crystal_list[0].surface_point, ))
+    t3 = MotorStack.CrystalTower_x_y_theta_chi(crystal=optics_all['vcc2'],
+                                               crystal_loc=np.copy(optics_all['vcc2'].crystal_list[1].surface_point, ))
+    t45 = MotorStack.CrystalTower_miniSD_Scan(channelCut1=optics_all['vcc3'],
+                                              crystal_loc1=np.copy(optics_all['vcc3'].crystal_list[0].surface_point, ),
+                                              channelCut2=optics_all['vcc4'],
+                                              crystal_loc2=np.copy(optics_all['vcc4'].crystal_list[1].surface_point, ),
+                                              )
 
     # Get the grating tower
-    g1 = Projects.L10237_and_AutoAlign.notebook_v2.MotorStack.Grating_tower(grating_1=optics_all['g1 cc'],
-                                                                            grating_m1=optics_all['g1 vcc'],
-                                                                            )
-    g2 = Projects.L10237_and_AutoAlign.notebook_v2.MotorStack.Grating_tower(grating_1=optics_all['g2 cc'],
-                                                                            grating_m1=optics_all['g2 vcc'], )
+    g1 = MotorStack.Grating_tower(grating_1=optics_all['g1 cc'],
+                                  grating_m1=optics_all['g1 vcc'],
+                                  )
+    g2 = MotorStack.Grating_tower(grating_1=optics_all['g2 cc'],
+                                  grating_m1=optics_all['g2 vcc'], )
 
-    tg_g = Projects.L10237_and_AutoAlign.notebook_v2.MotorStack.Grating_tower(grating_1=optics_all['tg g a'],
-                                                                              grating_m1=optics_all['tg g b'], )
+    tg_g = MotorStack.Grating_tower(grating_1=optics_all['tg g a'],
+                                    grating_m1=optics_all['tg g b'], )
 
     # Get the Mirror tower
-    m1 = Projects.L10237_and_AutoAlign.notebook_v2.MotorStack.Tower_x_y_pi(mirror=optics_all['tg mirror probe'], )
-    m2a = Projects.L10237_and_AutoAlign.notebook_v2.MotorStack.Mirror_tower1(mirror=optics_all['tg mirror pump a'])
-    m2b = Projects.L10237_and_AutoAlign.notebook_v2.MotorStack.Mirror_tower2(mirror=optics_all['tg mirror pump b'])
+    m1 = MotorStack.Tower_x_y_pi(mirror=optics_all['tg mirror probe'], )
+    m2a = MotorStack.Mirror_tower1(mirror=optics_all['tg mirror pump a'])
+    m2b = MotorStack.Mirror_tower2(mirror=optics_all['tg mirror pump b'])
 
     # Get the silicon tower
-    si = Projects.L10237_and_AutoAlign.notebook_v2.MotorStack.Silicon_tower(crystal=optics_all['tg si111'], )
+    si = MotorStack.Silicon_tower(crystal=optics_all['tg si111'], )
 
     # Get the sample tower
-    sample = Projects.L10237_and_AutoAlign.notebook_v2.MotorStack.TG_Sample_tower(sample=optics_all['sample'],
-                                                                                  yag_sample=optics_all['yag sample'],
-                                                                                  yag1=optics_all['yag1'],
-                                                                                  yag2=optics_all['yag2'],
-                                                                                  yag3=optics_all['yag3']
-                                                                                  )
+    sample = MotorStack.TG_Sample_tower(sample=optics_all['sample'],
+                                        yag_sample=optics_all['yag sample'],
+                                        yag1=optics_all['yag1'],
+                                        yag2=optics_all['yag2'],
+                                        yag3=optics_all['yag3']
+                                        )
 
     motor_stacks = {'t1': t1,
                     't2': t2,
