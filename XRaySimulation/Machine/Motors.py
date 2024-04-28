@@ -811,8 +811,8 @@ def install_motors_on_breadboard(motor_stack, breadboard, diag_hole_idx1, diag_h
 def get_motors_with_model_for_axis(model, rot_center_height=70e3, color='k', axis='x'):
     if model == "XA10A":
         print("Create a XA10A motor, moving along x axis.")
-        motor_obj = xyMotor(upperLim=12.5 * 1000 ,
-                            lowerLim=-12.5 * 1000 ,
+        motor_obj = xyMotor(upperLim=12.5 * 1000,
+                            lowerLim=-12.5 * 1000,
                             res=1,
                             backlash=100,
                             speed_um_per_ps=1 * 1000 / 1e12,
@@ -993,8 +993,8 @@ def get_motors_with_model_for_axis(model, rot_center_height=70e3, color='k', axi
     elif model == "ZA10A":
         print("Create a XA10A motor, moving along y axis.")
         motor_obj = zMotor(upperLim=7e3,
-                           lowerLim=7e3,
-                           res=1,
+                           lowerLim=-7e3,
+                           res=0.1,
                            backlash=100,
                            speed_um_per_ps=1 * 1000 / 1e12,
                            dimension=[100e3, 100e3],
@@ -1175,7 +1175,7 @@ class Tower_x_y_pi:
         self.optics = mirror
 
         # Create the list of all components in this tower
-        self.optics.shift(displacement=self.adaptor3.top_mount_pos - np.copy(mirror.surface_point))
+        self.optics.shift(displacement=self.adaptor3.top_mount_pos - np.copy(self.optics.surface_point))
         self.all_obj = [self.adaptor3, self.optics]
 
         self.all_obj = install_motors_on_motor_or_adaptors(motor_tower=self.all_obj, motor_or_adaptor=self.pi)
@@ -1544,7 +1544,7 @@ class Mirror_tower2:
         self.all_obj = install_motors_on_motor_or_adaptors(motor_tower=self.all_obj, motor_or_adaptor=self.adapter3)
         self.all_obj = install_motors_on_motor_or_adaptors(motor_tower=self.all_obj, motor_or_adaptor=self.roll)
 
-        print("test: current surface point", self.optics.surface_point)
+        # print("test: current surface point", self.optics.surface_point)
         # Everything above is copied from the mirror tower 1 class
         # Here I need to rotate the components to get the correct geometry
         # First rotate around the y axis
@@ -1553,7 +1553,7 @@ class Mirror_tower2:
                             [0, 0, -1], ])
         for item in self.all_obj:
             item.rotate_wrt_point(rot_mat=rot_mat, ref_point=self.roll.bottom_mount_pos)
-        print("test: current surface point", self.optics.surface_point)
+        # print("test: current surface point", self.optics.surface_point)
 
         # Adjust the dimension of adaptor 2
         self.adapter2.bottom_mount_pos[2] = -75e3
@@ -1625,8 +1625,6 @@ class Silicon_tower:
         (self.roll, self.pi) = get_motors_with_model_for_axis(model='SA05A-R2S01', axis='y')
         self.adaptor4 = AdaptorPlate(height=50e3, dimension=[20e3, 20e3])
         self.optics = crystal
-        # print(crystal.boundary)
-        # print(crystal.normal)
 
         # Install the crystal on the top of the first adaptor
         self.optics.shift(displacement=self.adaptor4.top_mount_pos - self.optics.surface_point)

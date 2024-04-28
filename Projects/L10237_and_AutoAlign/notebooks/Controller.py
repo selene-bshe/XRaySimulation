@@ -1,3 +1,7 @@
+"""
+This notebook tries to mimic the installation condition of the setup.
+"""
+
 import os
 
 import numpy as np
@@ -46,13 +50,13 @@ def get_optics():
     # Define gratings
     g1_cc = Crystal.RectangleGrating(a=g1_period / 2.,
                                      b=g1_period / 2.,
-                                     direction=np.array([1., 0., 0.], dtype=np.float64),
+                                     direction=np.array([-1., 0., 0.], dtype=np.float64),
                                      surface_point=np.zeros(3),
                                      order=1.)
 
     g1_vcc = Crystal.RectangleGrating(a=g1_period / 2.,
                                       b=g1_period / 2.,
-                                      direction=np.array([1., 0., 0.], dtype=np.float64),
+                                      direction=np.array([-1., 0., 0.], dtype=np.float64),
                                       surface_point=np.zeros(3),
                                       order=-1.)
 
@@ -367,14 +371,17 @@ class XppController_TG:
                                             diag_hole_idx1=(0, 7), diag_hole_idx2=(4, 19))
         Motors.install_motors_on_breadboard(motor_stack=self.m2b.all_obj, breadboard=self.breadboard3,
                                             diag_hole_idx1=(13, 7), diag_hole_idx2=(17, 19))
+        Motors.install_motors_on_breadboard(motor_stack=self.si.all_obj, breadboard=self.breadboard3,
+                                            diag_hole_idx1=(5, 25), diag_hole_idx2=(10, 30))
         Motors.install_motors_on_breadboard(motor_stack=self.sample.all_obj, breadboard=self.breadboard3,
                                             diag_hole_idx1=(5, 23), diag_hole_idx2=(8, 28))
-        Motors.install_motors_on_breadboard(motor_stack=self.si.all_obj, breadboard=self.breadboard3,
-                                            diag_hole_idx1=(5, 24), diag_hole_idx2=(10, 28))
 
-        displacement = np.array([412.7e3 - 254e3, 0.0, 0.0])
+        # print("test", self.si.optics.surface_point)
+        displacement = np.array([412.7e3 + 60e3, 0.0, 0.0])
         for item in self.si.all_obj:
             item.shift(displacement=displacement)
+
+        # print("test", self.si.optics.surface_point)
 
         # Install the gratings
         # Assume that there is no need to align the gratings
@@ -675,15 +682,33 @@ class XppController_TG:
         else:
             return trajectory, kout
 
-    def plot_motors(self, ax, color='black'):
-        for tower in self.all_towers:
-            for item in tower.all_motors:
-                ax.plot(item.boundary[:, 2] / 1000, item.boundary[:, 1] / 1000, c=color)
+    def plot_motors(self, ax, color='black', axis="xz"):
+        if axis == "xz":
+            for tower in self.all_towers:
+                for item in tower.all_motors:
+                    ax.plot(item.boundary[:, 2] / 1000, item.boundary[:, 1] / 1000, c=color)
+        elif axis == 'yz':
+            for tower in self.all_towers:
+                for item in tower.all_motors:
+                    ax.plot(item.boundary[:, 2] / 1000, item.boundary[:, 0] / 1000, c=color)
+        elif axis == 'xy':
+            for tower in self.all_towers:
+                for item in tower.all_motors:
+                    ax.plot(item.boundary[:, 1] / 1000, item.boundary[:, 0] / 1000, c=color)
 
-    def plot_optics(self, ax, color='black'):
-        for tower in self.all_towers:
-            for item in tower.all_optics:
-                ax.plot(item.boundary[:, 2] / 1000, item.boundary[:, 1] / 1000, c=color)
+    def plot_optics(self, ax, color='black', axis="xz"):
+        if axis == 'xz':
+            for tower in self.all_towers:
+                for item in tower.all_optics:
+                    ax.plot(item.boundary[:, 2] / 1000, item.boundary[:, 1] / 1000, c=color)
+        elif axis == 'yz':
+            for tower in self.all_towers:
+                for item in tower.all_optics:
+                    ax.plot(item.boundary[:, 2] / 1000, item.boundary[:, 0] / 1000, c=color)
+        elif axis == 'xy':
+            for tower in self.all_towers:
+                for item in tower.all_optics:
+                    ax.plot(item.boundary[:, 1] / 1000, item.boundary[:, 0] / 1000, c=color)
 
     def get_diode(self):
         pass
