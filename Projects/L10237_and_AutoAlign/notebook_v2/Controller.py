@@ -378,7 +378,7 @@ class XppController_TG:
             item.shift(displacement=displacement)
 
         # print("test", self.si.optics.surface_point)
-        displacement = np.array([412.7e3 + 60e3, 0.0, 0.0])
+        displacement = np.array([412.7e3 + 60e3, 25e3, 0.0])
         for item in self.si.all_obj:
             item.shift(displacement=displacement)
 
@@ -679,7 +679,7 @@ class XppController_TG:
         elif path == "pump b no mirror":
             defice_list = ([self.mono_t1.optics, self.mono_t2.optics, self.g1.grating_m1]
                            + self.t1.optics.crystal_list + self.t6.optics.crystal_list
-                           + [self.tg_g.grating_1, self.m2b.optics, self.sample.yag1])
+                           + [self.tg_g.grating_1, self.sample.yag1])
             trajectory, kout, pathlength = DeviceSimu.get_lightpath(device_list=defice_list,
                                                                     kin=self.gaussian_pulse.k0,
                                                                     initial_point=self.gaussian_pulse.x0,
