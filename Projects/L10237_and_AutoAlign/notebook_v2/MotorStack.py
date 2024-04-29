@@ -673,13 +673,13 @@ class TG_Sample_tower:
             item.rotate_wrt_point(rot_mat=rot_mat, ref_point=np.copy(self.adaptor4.bottom_mount_pos))
 
         # Assemble the small sample tower to the big sample and yag tower
-        displacement = np.array([0, -67.5e3, -70.35e3]) + np.copy(self.adaptor3.top_mount_pos)
+        displacement = np.array([0, -77.5e3, -70.35e3]) + np.copy(self.adaptor3.top_mount_pos)
         for item in self.all_obj:
             item.shift(displacement=displacement)
 
-        self.yag1.shift(displacement=np.array([35.7e3, 67.5e3, -70.35e3]) + np.copy(self.adaptor3.top_mount_pos))
-        self.yag2.shift(displacement=np.array([45.7e3, 67.5e3, -70.35e3]) + np.copy(self.adaptor3.top_mount_pos))
-        self.yag3.shift(displacement=np.array([45.7e3, 77.5e3, -70.35e3]) + np.copy(self.adaptor3.top_mount_pos))
+        self.yag1.shift(displacement=np.array([35.7e3, 77.5e3, -70.35e3]) + np.copy(self.adaptor3.top_mount_pos))
+        self.yag2.shift(displacement=np.array([35.7e3, 87.5e3, -70.35e3]) + np.copy(self.adaptor3.top_mount_pos))
+        self.yag3.shift(displacement=np.array([45.7e3, 87.5e3, -70.35e3]) + np.copy(self.adaptor3.top_mount_pos))
         self.all_obj = [self.adaptor3, self.yag1, self.yag2, self.yag3] + self.all_obj
 
         self.all_obj = install_motors_on_motor_or_adaptors(motor_tower=self.all_obj, motor_or_adaptor=self.z)

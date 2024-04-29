@@ -130,11 +130,11 @@ class xyMotor:
 
                 # Move the stage table
                 self.top_mount_pos = self.top_mount_pos + physical_motion
+                print("Motor moved from {:.4f} um to to {:.4f} um".format(self.control_location,
+                                                                          target))
 
                 # Step 4: Change the status in the control system
                 self.control_location = target
-
-                print("Motor moved to {:.4f} um".format(self.control_location))
 
                 # The motion time
                 motion_time = delta / self.control_speed
@@ -161,10 +161,11 @@ class xyMotor:
 
                     # Move the stage table
                     self.top_mount_pos = self.top_mount_pos + physical_motion
+                    print("Motor moved from {:.4f} um to to {:.4f} um".format(self.control_location,
+                                                                              target))
 
                     # Step 4: Change the status in the control system
                     self.control_location = target
-                    print("Motor moved to {:.4f} um".format(self.control_location))
 
                     motion_time = (2 * self.control_backlash + delta) / self.control_speed
                     return motion_time, motion_record
@@ -285,11 +286,11 @@ class zMotor:
 
                 # Move the stage table
                 self.top_mount_pos = self.top_mount_pos + physical_motion
+                print("Motor moved from {:.4f} um to to {:.4f} um".format(self.control_location,
+                                                                          target))
 
                 # Step 4: Change the status in the control system
                 self.control_location = target
-
-                print("Motor moved to {:.4f} um".format(self.control_location))
                 # The motion time
                 motion_time = delta / self.control_speed
 
@@ -311,10 +312,11 @@ class zMotor:
                     motion_record += physical_motion
                     # Move the stage table
                     self.top_mount_pos = self.top_mount_pos + physical_motion
+                    print("Motor moved from {:.4f} um to to {:.4f} um".format(self.control_location,
+                                                                              target))
 
                     # Step 4: Change the status in the control system
                     self.control_location = target
-                    print("Motor moved to {:.4f} um".format(self.control_location))
 
                     motion_time = (2 * self.control_backlash + delta) / self.control_speed
                     return motion_time, motion_record
@@ -444,9 +446,9 @@ class RotationMotor:
                 self.deg0direction = np.dot(rotMat, self.deg0direction)
 
                 # Step 4 : change the control system information
+                print("Motor moved from {:.5f} to {:.5f} degree".format(np.rad2deg(self.control_location),
+                                                                        np.rad2deg(target)))
                 self.control_location = target
-
-                print("Motor moved to {:.5f} deg".format(np.rad2deg(self.control_location)))
 
                 motion_time = delta / self.control_speed
                 return motion_time, rotMat
@@ -465,8 +467,11 @@ class RotationMotor:
                         angleRadian=- self.control_backlash + self.res * (np.random.rand() - 0.5),
                         axis=self.rotation_axis)
                     self.deg0direction = np.dot(rotMat2, self.deg0direction)
+                    # Step 4 : change the control system information
+                    print("Motor moved from {:.5f} to {:.5f} degree".format(np.rad2deg(self.control_location),
+                                                                            np.rad2deg(target)))
                     self.control_location = target
-                    print("Motor moved to {:.5f} deg".format(np.rad2deg(self.control_location)))
+
                     motion_time = (2 * self.control_backlash + delta) / self.control_speed
                     return motion_time, np.dot(rotMat2, rotMat1)
 
@@ -598,9 +603,10 @@ class SwivalMotor:
                 self.deg0direction = np.dot(rotMat, self.deg0direction)
 
                 # Step 4 : change the control system information
+                print("Motor moved from {:.5f} to {:.5f} degree".format(np.rad2deg(self.control_location),
+                                                                        np.rad2deg(target)))
                 self.control_location = target
 
-                print("Motor moved to {:.5f} degree".format(np.rad2deg(self.control_location)))
                 motion_time = delta / self.control_speed
                 return motion_time, rotMat
 
@@ -619,8 +625,11 @@ class SwivalMotor:
                         axis=self.rotation_axis)
                     self.deg0direction = np.dot(rotMat2, self.deg0direction)
 
+                    # Step 4 : change the control system information
+                    print("Motor moved from {:.5f} to {:.5f} degree".format(np.rad2deg(self.control_location),
+                                                                            np.rad2deg(target)))
                     self.control_location = target
-                    print("Motor moved to {:.5f} degree".format(np.rad2deg(self.control_location)))
+
                     motion_time = (2 * self.control_backlash + delta) / self.control_speed
                     return motion_time, np.dot(rotMat2, rotMat1)
 
@@ -776,7 +785,7 @@ def install_motors_on_motor_or_adaptors(motor_tower, motor_or_adaptor):
     """
     # Step 2 move the motor such that the center of the bottom mounting surface of the first motor is
     # the same as the top mounting surface of the new motor or adaptor.
-    displacement = np.copy(motor_or_adaptor.top_mount_pos - motor_tower[0].bottom_mount_pos)
+    displacement = np.copy(motor_or_adaptor.top_mount_pos) - np.copy(motor_tower[0].bottom_mount_pos)
     for motor in motor_tower:
         motor.shift(displacement=displacement)
 
@@ -1080,5 +1089,3 @@ def get_motors_with_model_for_axis(model, rot_center_height=70e3, color='k', axi
         motor_obj = 0
 
     return motor_obj
-
-

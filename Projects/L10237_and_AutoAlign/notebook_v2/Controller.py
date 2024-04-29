@@ -358,7 +358,7 @@ class XppController_TG:
                                             diag_hole_idx1=(7, 42), diag_hole_idx2=(11, 47))
 
         # Install mirror1
-        displacement = np.array([0.0, 0.0, 4e6]) - self.m1.optics.surface_point
+        displacement = np.array([0e3, 0.0, 4e6]) - self.m1.optics.surface_point
         for item in self.m1.all_obj:
             item.shift(displacement=displacement)
 
@@ -371,14 +371,16 @@ class XppController_TG:
         Motors.install_motors_on_breadboard(motor_stack=self.si.all_obj, breadboard=self.breadboard3,
                                             diag_hole_idx1=(5, 25), diag_hole_idx2=(10, 30))
         Motors.install_motors_on_breadboard(motor_stack=self.sample.all_obj, breadboard=self.breadboard3,
-                                            diag_hole_idx1=(5, 23), diag_hole_idx2=(8, 28))
+                                            diag_hole_idx1=(4, 23), diag_hole_idx2=(7, 28))
+
+        displacement = np.array([50e3, 0.0, 0.0])
+        for item in self.sample.all_obj:
+            item.shift(displacement=displacement)
 
         # print("test", self.si.optics.surface_point)
         displacement = np.array([412.7e3 + 60e3, 0.0, 0.0])
         for item in self.si.all_obj:
             item.shift(displacement=displacement)
-
-        # print("test", self.si.optics.surface_point)
 
         # Install the gratings
         # Assume that there is no need to align the gratings
@@ -586,8 +588,106 @@ class XppController_TG:
             tower[3][:] = (np.copy(angles1 - angle_adjust), np.square(np.abs(reflect_sigma1)) / np.abs(b_factor1))
             kin = np.copy(kout1[index])
 
-    def get_raytracing_trajectory(self, path="mono", get_path_length='False'):
-        if path == "mono":
+    def get_raytracing_trajectory(self, path="mono", get_path_length='True'):
+
+        if path == "cc":
+            defice_list = ([self.mono_t1.optics, self.mono_t2.optics, self.g1.grating_m1]
+                           + self.t1.optics.crystal_list + self.t6.optics.crystal_list
+                           + [self.sample.yag1, ])
+            trajectory, kout, pathlength = DeviceSimu.get_lightpath(device_list=defice_list,
+                                                                    kin=self.gaussian_pulse.k0,
+                                                                    initial_point=self.gaussian_pulse.x0,
+                                                                    final_plane_point=
+                                                                    np.copy(self.sample.yag1.surface_point),
+                                                                    final_plane_normal=
+                                                                    np.copy(self.sample.yag1.normal))
+
+
+        elif path == "vcc":
+            defice_list = ([self.mono_t1.optics, self.mono_t2.optics, self.g1.grating_1]
+                           + self.t2.optics.crystal_list + self.t3.optics.crystal_list
+                           + self.t45.optics1.crystal_list + self.t45.optics2.crystal_list
+                           + [self.sample.yag1, ])
+
+            trajectory, kout, pathlength = DeviceSimu.get_lightpath(device_list=defice_list,
+                                                                    kin=self.gaussian_pulse.k0,
+                                                                    initial_point=self.gaussian_pulse.x0,
+                                                                    final_plane_point=
+                                                                    np.copy(self.sample.yag1.surface_point),
+                                                                    final_plane_normal=
+                                                                    np.copy(self.sample.yag1.normal))
+        elif path == "probe m1 only":
+            defice_list = ([self.mono_t1.optics, self.mono_t2.optics, self.g1.grating_1]
+                           + self.t2.optics.crystal_list + self.t3.optics.crystal_list
+                           + self.t45.optics1.crystal_list + self.t45.optics2.crystal_list
+                           + [self.m1.optics, self.sample.yag1])
+
+            trajectory, kout, pathlength = DeviceSimu.get_lightpath(device_list=defice_list,
+                                                                    kin=self.gaussian_pulse.k0,
+                                                                    initial_point=self.gaussian_pulse.x0,
+                                                                    final_plane_point=
+                                                                    np.copy(self.sample.yag1.surface_point),
+                                                                    final_plane_normal=
+                                                                    np.copy(self.sample.yag1.normal))
+        elif path == "probe":
+            defice_list = ([self.mono_t1.optics, self.mono_t2.optics, self.g1.grating_1]
+                           + self.t2.optics.crystal_list + self.t3.optics.crystal_list
+                           + self.t45.optics1.crystal_list + self.t45.optics2.crystal_list
+                           + [self.m1.optics, self.si.optics, self.sample.yag1])
+
+            trajectory, kout, pathlength = DeviceSimu.get_lightpath(device_list=defice_list,
+                                                                    kin=self.gaussian_pulse.k0,
+                                                                    initial_point=self.gaussian_pulse.x0,
+                                                                    final_plane_point=
+                                                                    np.copy(self.sample.yag1.surface_point),
+                                                                    final_plane_normal=
+                                                                    np.copy(self.sample.yag1.normal))
+
+        elif path == "pump a":
+            defice_list = ([self.mono_t1.optics, self.mono_t2.optics, self.g1.grating_m1]
+                           + self.t1.optics.crystal_list + self.t6.optics.crystal_list
+                           + [self.tg_g.grating_m1, self.m2a.optics, self.sample.yag1])
+            trajectory, kout, pathlength = DeviceSimu.get_lightpath(device_list=defice_list,
+                                                                    kin=self.gaussian_pulse.k0,
+                                                                    initial_point=self.gaussian_pulse.x0,
+                                                                    final_plane_point=np.copy(
+                                                                        self.sample.yag1.surface_point),
+                                                                    final_plane_normal=np.copy(self.sample.yag1.normal))
+
+        elif path == "pump a no mirror":
+            defice_list = ([self.mono_t1.optics, self.mono_t2.optics, self.g1.grating_m1]
+                           + self.t1.optics.crystal_list + self.t6.optics.crystal_list
+                           + [self.tg_g.grating_m1, self.sample.yag1])
+            trajectory, kout, pathlength = DeviceSimu.get_lightpath(device_list=defice_list,
+                                                                    kin=self.gaussian_pulse.k0,
+                                                                    initial_point=self.gaussian_pulse.x0,
+                                                                    final_plane_point=np.copy(
+                                                                        self.sample.yag1.surface_point),
+                                                                    final_plane_normal=np.copy(self.sample.yag1.normal))
+
+        elif path == "pump b":
+            defice_list = ([self.mono_t1.optics, self.mono_t2.optics, self.g1.grating_m1]
+                           + self.t1.optics.crystal_list + self.t6.optics.crystal_list
+                           + [self.tg_g.grating_1, self.m2b.optics, self.sample.yag1])
+            trajectory, kout, pathlength = DeviceSimu.get_lightpath(device_list=defice_list,
+                                                                    kin=self.gaussian_pulse.k0,
+                                                                    initial_point=self.gaussian_pulse.x0,
+                                                                    final_plane_point=np.copy(
+                                                                        self.sample.yag1.surface_point),
+                                                                    final_plane_normal=np.copy(self.sample.yag1.normal))
+
+        elif path == "pump b no mirror":
+            defice_list = ([self.mono_t1.optics, self.mono_t2.optics, self.g1.grating_m1]
+                           + self.t1.optics.crystal_list + self.t6.optics.crystal_list
+                           + [self.tg_g.grating_1, self.m2b.optics, self.sample.yag1])
+            trajectory, kout, pathlength = DeviceSimu.get_lightpath(device_list=defice_list,
+                                                                    kin=self.gaussian_pulse.k0,
+                                                                    initial_point=self.gaussian_pulse.x0,
+                                                                    final_plane_point=np.copy(
+                                                                        self.sample.yag1.surface_point),
+                                                                    final_plane_normal=np.copy(self.sample.yag1.normal))
+
+        elif path == "mono":
             defice_list = [self.mono_t1.optics, self.mono_t2.optics]
             trajectory, kout, pathlength = DeviceSimu.get_lightpath(device_list=defice_list,
                                                                     kin=self.gaussian_pulse.k0,
@@ -671,9 +771,11 @@ class XppController_TG:
                                                                         self.sample.yag1.surface_point),
                                                                     final_plane_normal=np.copy(self.sample.yag1.normal))
         else:
+            print("Warning, the specified path option is not defined.")
             trajectory = 0
             kout = 0
             pathlength = 0
+
         if get_path_length:
             return trajectory, kout, pathlength
         else:

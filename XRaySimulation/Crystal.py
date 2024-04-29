@@ -669,7 +669,7 @@ class YAG:
         self.type = "YAG"
 
         if dimension is None:
-            dimension = [10000, 10000]
+            dimension = [10e3, 10e3]
 
         # Geometry info
         self.surface_point = np.copy(surface_point)
