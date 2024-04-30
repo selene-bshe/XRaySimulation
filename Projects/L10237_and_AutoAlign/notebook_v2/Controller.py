@@ -2,11 +2,12 @@
 This notebook tries to mimic the installation condition of the setup.
 """
 
-import numpy as np
-
 import sys
 
 sys.path.append("../../../../XRaySimulation")
+
+import numpy as np
+from matplotlib import patches
 
 from XRaySimulation import Crystal, DeviceSimu, util, Pulse
 from XRaySimulation.Machine import Motors, ScintillatorCamera
@@ -431,8 +432,8 @@ class XppController_TG:
         (angles1, reflect_sigma1,
          reflect_pi1, b_factor1, kout1) = DeviceSimu.get_rocking_curve_around_axis(
             kin=self.gaussian_pulse.k0,
-            scan_range=np.deg2rad(0.5),
-            scan_number=10 ** 4,
+            scan_range=np.deg2rad(0.2),
+            scan_number=10 ** 3,
             rotation_axis=self.mono_t1.th.rotation_axis,
             h_initial=self.mono_t1.optics.h,
             normal_initial=self.mono_t1.optics.normal,
@@ -454,8 +455,8 @@ class XppController_TG:
         (angles2, reflect_sigma2,
          reflect_pi2, b_factor2, kout2) = DeviceSimu.get_rocking_curve_around_axis(
             kin=kin1,
-            scan_range=np.deg2rad(0.5),
-            scan_number=10 ** 4,
+            scan_range=np.deg2rad(0.2),
+            scan_number=10 ** 3,
             rotation_axis=self.mono_t2.th.rotation_axis,
             h_initial=self.mono_t2.optics.h,
             normal_initial=self.mono_t2.optics.normal,
@@ -518,8 +519,8 @@ class XppController_TG:
             (angles1, reflect_sigma1,
              reflect_pi1, b_factor1, kout1) = DeviceSimu.get_rocking_curve_channelcut_around_axis(
                 kin=kin,
-                scan_range=np.deg2rad(0.5),
-                scan_number=10 ** 4,
+                scan_range=np.deg2rad(0.2),
+                scan_number=10 ** 3,
                 rotation_axis=tower[0].th.rotation_axis,
                 channelcut=tower[0].optics, )
 
@@ -545,8 +546,8 @@ class XppController_TG:
             (angles1, reflect_sigma1,
              reflect_pi1, b_factor1, kout1) = DeviceSimu.get_rocking_curve_channelcut_around_axis(
                 kin=kin,
-                scan_range=np.deg2rad(0.5),
-                scan_number=10 ** 4,
+                scan_range=np.deg2rad(0.2),
+                scan_number=10 ** 3,
                 rotation_axis=tower[0].th.rotation_axis,
                 channelcut=tower[0].optics, )
 
@@ -571,8 +572,8 @@ class XppController_TG:
             (angles1, reflect_sigma1,
              reflect_pi1, b_factor1, kout1) = DeviceSimu.get_rocking_curve_channelcut_around_axis(
                 kin=kin,
-                scan_range=np.deg2rad(0.5),
-                scan_number=10 ** 4,
+                scan_range=np.deg2rad(0.2),
+                scan_number=10 ** 3,
                 rotation_axis=tower[0].rotation_axis,
                 channelcut=tower[1])
 
@@ -586,6 +587,84 @@ class XppController_TG:
 
             # Record the current rocking curve
             tower[3][:] = (np.copy(angles1 - angle_adjust), np.square(np.abs(reflect_sigma1)) / np.abs(b_factor1))
+            kin = np.copy(kout1[index])
+
+    def get_miniSD_rocking(self):
+        # Get the kout after the XPP mono
+        _, kout, _ = DeviceSimu.get_lightpath(device_list=[self.mono_t1.optics, self.mono_t2.optics],
+                                              kin=self.gaussian_pulse.k0,
+                                              initial_point=self.gaussian_pulse.x0,
+                                              final_plane_point=np.array([0, 0, 10e6]),
+                                              final_plane_normal=np.array([0, 0, -1]))
+        kout = kout[-1]
+
+        # Fine adjustment according to dynamical diffraction theory
+        kin = np.copy(kout + self.g1.grating_m1.momentum_transfer)
+        combo = [[self.t1, self.t1_rocking],
+                 [self.t6, self.t6_rocking], ]
+        for tower in combo:
+            # Step 2, get the rocking curve around the motion axis for the two crystals.
+            (angles1, reflect_sigma1, reflect_pi1, b_factor1, kout1
+             ) = DeviceSimu.get_rocking_curve_channelcut_around_axis(
+                kin=kin, scan_range=np.deg2rad(0.2), scan_number=10 ** 3,
+                rotation_axis=tower[0].th.rotation_axis, channelcut=tower[0].optics, )
+
+            # Get the target bragg peak
+            (fwhm, angle_adjust, index
+             ) = util.get_fwhm(coordinate=angles1, curve_values=np.square(np.abs(reflect_sigma1)),
+                               center=True, get_index=True)
+
+            # Record the current rocking curve
+            tower[1][:] = [np.copy(angles1), np.square(np.abs(reflect_sigma1)) / np.abs(b_factor1)]
+            kin = np.copy(kout1[index])
+
+        # Align vcc2 and vcc3
+        # Fine adjustment according to dynamical diffraction theory
+        kin = np.copy(kout + self.g1.grating_1.momentum_transfer)
+        combo = [[self.t2, self.t2_rocking],
+                 [self.t3, self.t3_rocking], ]
+        for tower in combo:
+            # Step 2, get the rocking curve around the motion axis for the two crystals.
+            (angles1, reflect_sigma1,
+             reflect_pi1, b_factor1, kout1) = DeviceSimu.get_rocking_curve_channelcut_around_axis(
+                kin=kin,
+                scan_range=np.deg2rad(0.2),
+                scan_number=10 ** 3,
+                rotation_axis=tower[0].th.rotation_axis,
+                channelcut=tower[0].optics, )
+
+            # Get the target bragg peak
+            fwhm, angle_adjust, index = util.get_fwhm(coordinate=angles1,
+                                                      curve_values=np.square(np.abs(reflect_sigma1)),
+                                                      center=True,
+                                                      get_index=True)
+
+            # Record the current rocking curve
+            tower[1][:] = [np.copy(angles1), np.square(np.abs(reflect_sigma1)) / np.abs(b_factor1)]
+            kin = np.copy(kout1[index])
+
+        # Align vcc4 and vcc5
+        # Fine adjustment according to dynamical diffraction theory
+        combo = [[self.t45.th1, self.t45.optics1, self.t45.th1_umv, self.t4_rocking],
+                 [self.t45.th2, self.t45.optics2, self.t45.th2_umv, self.t5_rocking], ]
+        for tower in combo:
+            # Step 2, get the rocking curve around the motion axis for the two crystals.
+            (angles1, reflect_sigma1,
+             reflect_pi1, b_factor1, kout1) = DeviceSimu.get_rocking_curve_channelcut_around_axis(
+                kin=kin,
+                scan_range=np.deg2rad(0.2),
+                scan_number=10 ** 3,
+                rotation_axis=tower[0].rotation_axis,
+                channelcut=tower[1])
+
+            # Get the target bragg peak
+            fwhm, angle_adjust, index = util.get_fwhm(coordinate=angles1,
+                                                      curve_values=np.square(np.abs(reflect_sigma1)),
+                                                      center=True,
+                                                      get_index=True)
+
+            # Record the current rocking curve
+            tower[3][:] = (np.copy(angles1), np.square(np.abs(reflect_sigma1)) / np.abs(b_factor1))
             kin = np.copy(kout1[index])
 
     def get_raytracing_trajectory(self, path="mono", get_path_length='True'):
@@ -602,6 +681,17 @@ class XppController_TG:
                                                                     final_plane_normal=
                                                                     np.copy(self.sample.yag1.normal))
 
+        elif path == "cc sample":
+            defice_list = ([self.mono_t1.optics, self.mono_t2.optics, self.g1.grating_m1]
+                           + self.t1.optics.crystal_list + self.t6.optics.crystal_list
+                           + [self.sample.sample, ])
+            trajectory, kout, pathlength = DeviceSimu.get_lightpath(device_list=defice_list,
+                                                                    kin=self.gaussian_pulse.k0,
+                                                                    initial_point=self.gaussian_pulse.x0,
+                                                                    final_plane_point=
+                                                                    np.copy(self.sample.yag1.surface_point),
+                                                                    final_plane_normal=
+                                                                    np.copy(self.sample.yag1.normal))
 
         elif path == "vcc":
             defice_list = ([self.mono_t1.optics, self.mono_t2.optics, self.g1.grating_1]
@@ -695,32 +785,24 @@ class XppController_TG:
                                                                     final_plane_point=np.array([0, 0, -7e6]),
                                                                     final_plane_normal=np.array([0, 0, -1]))
 
-        elif path == "mono SD m1 yag":
+        elif path == "probe sample":
             defice_list = ([self.mono_t1.optics, self.mono_t2.optics, self.g1.grating_1]
                            + self.t2.optics.crystal_list + self.t3.optics.crystal_list
                            + self.t45.optics1.crystal_list + self.t45.optics2.crystal_list
-                           + [self.m1.optics, self.sample.yag1])
+                           + [self.m1.optics, self.si.optics, self.sample.sample])
+
             trajectory, kout, pathlength = DeviceSimu.get_lightpath(device_list=defice_list,
                                                                     kin=self.gaussian_pulse.k0,
                                                                     initial_point=self.gaussian_pulse.x0,
-                                                                    final_plane_point=np.copy(
-                                                                        self.sample.yag1.surface_point),
-                                                                    final_plane_normal=np.copy(self.sample.yag1.normal))
-        elif path == "mono SD m1 si yag":
-            defice_list = ([self.mono_t1.optics, self.mono_t2.optics, self.g1.grating_1]
-                           + self.t2.optics.crystal_list + self.t3.optics.crystal_list
-                           + self.t45.optics1.crystal_list + self.t45.optics2.crystal_list
-                           + [self.m1.optics, self.si.optics, self.sample.yag1])
-            trajectory, kout, pathlength = DeviceSimu.get_lightpath(device_list=defice_list,
-                                                                    kin=self.gaussian_pulse.k0,
-                                                                    initial_point=self.gaussian_pulse.x0,
-                                                                    final_plane_point=np.copy(
-                                                                        self.sample.yag1.surface_point),
-                                                                    final_plane_normal=np.copy(self.sample.yag1.normal))
-        elif path == "mono SD yag":
+                                                                    final_plane_point=
+                                                                    np.copy(self.sample.yag1.surface_point),
+                                                                    final_plane_normal=
+                                                                    np.copy(self.sample.yag1.normal))
+
+        elif path == "pump a sample":
             defice_list = ([self.mono_t1.optics, self.mono_t2.optics, self.g1.grating_m1]
                            + self.t1.optics.crystal_list + self.t6.optics.crystal_list
-                           + [self.sample.yag1, ])
+                           + [self.tg_g.grating_m1, self.m2a.optics, self.sample.sample])
             trajectory, kout, pathlength = DeviceSimu.get_lightpath(device_list=defice_list,
                                                                     kin=self.gaussian_pulse.k0,
                                                                     initial_point=self.gaussian_pulse.x0,
@@ -728,39 +810,7 @@ class XppController_TG:
                                                                         self.sample.yag1.surface_point),
                                                                     final_plane_normal=np.copy(self.sample.yag1.normal))
 
-
-        elif path == "mono SD tga yag":
-            defice_list = ([self.mono_t1.optics, self.mono_t2.optics, self.g1.grating_m1]
-                           + self.t1.optics.crystal_list + self.t6.optics.crystal_list
-                           + [self.tg_g.grating_m1, self.sample.yag1])
-            trajectory, kout, pathlength = DeviceSimu.get_lightpath(device_list=defice_list,
-                                                                    kin=self.gaussian_pulse.k0,
-                                                                    initial_point=self.gaussian_pulse.x0,
-                                                                    final_plane_point=np.copy(
-                                                                        self.sample.yag1.surface_point),
-                                                                    final_plane_normal=np.copy(self.sample.yag1.normal))
-
-        elif path == "mono SD tga m2a yag":
-            defice_list = ([self.mono_t1.optics, self.mono_t2.optics, self.g1.grating_m1]
-                           + self.t1.optics.crystal_list + self.t6.optics.crystal_list
-                           + [self.tg_g.grating_m1, self.m2a.optics, self.sample.yag1])
-            trajectory, kout, pathlength = DeviceSimu.get_lightpath(device_list=defice_list,
-                                                                    kin=self.gaussian_pulse.k0,
-                                                                    initial_point=self.gaussian_pulse.x0,
-                                                                    final_plane_point=np.copy(
-                                                                        self.sample.yag1.surface_point),
-                                                                    final_plane_normal=np.copy(self.sample.yag1.normal))
-        elif path == "mono SD tgb yag":
-            defice_list = ([self.mono_t1.optics, self.mono_t2.optics, self.g1.grating_m1]
-                           + self.t1.optics.crystal_list + self.t6.optics.crystal_list
-                           + [self.tg_g.grating_1, self.sample.yag1])
-            trajectory, kout, pathlength = DeviceSimu.get_lightpath(device_list=defice_list,
-                                                                    kin=self.gaussian_pulse.k0,
-                                                                    initial_point=self.gaussian_pulse.x0,
-                                                                    final_plane_point=np.copy(
-                                                                        self.sample.yag1.surface_point),
-                                                                    final_plane_normal=np.copy(self.sample.yag1.normal))
-        elif path == "mono SD tgb m2b yag":
+        elif path == "pump b sample":
             defice_list = ([self.mono_t1.optics, self.mono_t2.optics, self.g1.grating_m1]
                            + self.t1.optics.crystal_list + self.t6.optics.crystal_list
                            + [self.tg_g.grating_1, self.m2b.optics, self.sample.yag1])
@@ -770,6 +820,8 @@ class XppController_TG:
                                                                     final_plane_point=np.copy(
                                                                         self.sample.yag1.surface_point),
                                                                     final_plane_normal=np.copy(self.sample.yag1.normal))
+
+
         else:
             print("Warning, the specified path option is not defined.")
             trajectory = 0
@@ -808,6 +860,347 @@ class XppController_TG:
             for tower in self.all_towers:
                 for item in tower.all_optics:
                     ax.plot(item.boundary[:, 1] / 1000, item.boundary[:, 0] / 1000, c=color)
+
+    def plot_mono_rocking(self, ax_mono_t1, ax_mono_t2):
+
+        ax_mono_t1.plot(np.rad2deg(self.mono_t1_rocking[0]) * 1e3,
+                        self.mono_t1_rocking[1], c='b', label='mono t1')
+        ax_mono_t1.set_xlim([- 5, 5])
+        ax_mono_t1.set_xlabel("relative th (mdeg)")
+        ax_mono_t1.set_ylabel("R")
+        ax_mono_t1.set_title("mono T1")
+
+        ax_mono_t2.plot(np.rad2deg(self.mono_t2_rocking[0]) * 1e3,
+                        self.mono_t2_rocking[1], c='r', label='mono t2')
+        ax_mono_t2.set_xlim([- 5, 5])
+        ax_mono_t2.set_xlabel("relative th (mdeg)")
+        ax_mono_t2.set_ylabel("R")
+        ax_mono_t2.set_title("mono T2")
+
+    def plot_mono_optics(self, ax, show_trajectory=False):
+
+        self.plot_motors(ax=ax, color='black')
+        self.plot_optics(ax=ax, color='blue')
+
+        if show_trajectory:
+            mono_traj, mono_kout, mono_pathlength = self.get_raytracing_trajectory(path="mono")
+            ax.plot(mono_traj[:, 2] / 1e3, mono_traj[:, 1] / 1e3, 'g', label='vcc')
+
+        ax.set_aspect('equal')
+        ax.set_title("Mono after alignment")
+        ax.set_xlabel("z (mm)")
+        ax.set_ylabel("x (mm)")
+        ax.set_xlim([-10e3 - 800, -10e3 + 100])
+        ax.set_ylim([- 600, 100])
+
+    def plot_miniSD_table(self, ax, xlim=None, ylim=None, show_trajectory=False):
+        if xlim is None:
+            xlim = [-100, 1200]
+        if ylim is None:
+            ylim = [-100, 100]
+
+        self.plot_motors(ax=ax, color='black')
+        self.plot_optics(ax=ax, color='blue')
+
+        ax.set_aspect('equal')
+        ax.set_xlabel("z (mm)")
+        ax.set_ylabel("x (mm)")
+        ax.set_xlim(xlim)
+        ax.set_ylim(ylim)
+
+        if show_trajectory:
+            vcc_traj, vcc_kout, vcc_path = self.get_raytracing_trajectory(path="vcc")
+            cc_traj, cc_kout, cc_path = self.get_raytracing_trajectory(path="cc")
+
+            ax.plot(vcc_traj[:, 2] / 1e3, vcc_traj[:, 1] / 1e3, 'g', label='vcc')
+            ax.plot(cc_traj[:, 2] / 1e3, cc_traj[:, 1] / 1e3, 'r', label='cc')
+
+    def plot_miniSD_rocking(self, ax_list):
+
+        # Get the current rocking curve
+        self.get_miniSD_rocking()
+        print("Get the most updated rocking curve around current location.")
+
+        # Start plotting
+        record_to_plot = [self.t1_rocking, self.t2_rocking, self.t3_rocking,
+                          self.t4_rocking, self.t5_rocking, self.t6_rocking]
+        for idx in range(6):
+            record = record_to_plot[idx]
+            ax_list[idx].plot(np.rad2deg(record[0]) * 1000, record[1], label='t{}'.format(idx + 1))
+            ax_list[idx].set_xlabel('relative th (mdeg)')
+            ax_list[idx].legend()
+            ax_list[idx].set_xlim([-5, 5])
+
+    def plot_beam_on_yag(self, ax):
+
+        vcc_traj, vcc_kout, vcc_pathlength = self.get_raytracing_trajectory(path="vcc")
+        probe_m1_traj, probe_m1_kout, probe_m1_pathlength = self.get_raytracing_trajectory(path="probe m1 only")
+        probe_traj, kout, probe_pathlength = self.get_raytracing_trajectory(path="probe")
+
+        pump_ref_traj, pump_ref_kout, pump_ref_path = self.get_raytracing_trajectory(path="cc")
+        pump_a_no_mirror_traj, kout, pump_a_path = self.get_raytracing_trajectory(path='pump a no mirror')
+        pump_a_traj, kout, pump_a_path = self.get_raytracing_trajectory(path='pump a')
+        pump_b_no_mirror_traj, kout, pump_a_path = self.get_raytracing_trajectory(path='pump b no mirror')
+        pump_b_traj, kout, pump_a_path = self.get_raytracing_trajectory(path='pump b')
+
+        vcc_spot = patches.Rectangle((vcc_traj[-1][1] / 1e3 - 0.75, vcc_traj[-1][0] / 1e3 - 0.75),
+                                     width=1.5, height=1.5, fill=False, edgecolor='green', label='vcc')
+        probe_m1_spot = patches.RegularPolygon(
+            xy=(probe_m1_traj[-1][1] / 1e3, probe_m1_traj[-1][0] / 1e3),
+            numVertices=3, radius=1., fill=False, edgecolor='black', label='m1')
+        probe_spot = patches.Circle((probe_traj[-1][1] / 1e3, probe_traj[-1][0] / 1e3),
+                                    radius=0.5, fill=False, edgecolor='orange', label='probe')
+
+        cc_spot = patches.Rectangle((pump_ref_traj[-1][1] / 1e3 - 0.75, pump_ref_traj[-1][0] / 1e3 - 0.75),
+                                    width=1.5, height=1.5, fill=False, edgecolor='pink', label='cc')
+        pump_no_m1a_spot = patches.RegularPolygon(
+            xy=(pump_a_no_mirror_traj[-1][1] / 1e3, pump_a_no_mirror_traj[-1][0] / 1e3),
+            numVertices=3, radius=1., fill=False, edgecolor='pink', label='m2a')
+        pump_no_m2b_spot = patches.RegularPolygon(
+            xy=(pump_b_no_mirror_traj[-1][1] / 1e3, pump_b_no_mirror_traj[-1][0] / 1e3),
+            numVertices=3, radius=1., fill=False, edgecolor='brown', label='m2b')
+        pump_m1a_spot = patches.Circle((pump_a_traj[-1][1] / 1e3, pump_a_traj[-1][0] / 1e3),
+                                       radius=0.5, fill=False, edgecolor='red', label='tg a')
+        pump_m2b_spot = patches.Circle((pump_b_traj[-1][1] / 1e3, pump_b_traj[-1][0] / 1e3),
+                                       radius=0.5, fill=False, edgecolor='purple', label='tg b')
+
+        for item in self.sample.all_optics:
+            ax.plot(item.boundary[:, 1] / 1000, item.boundary[:, 0] / 1000, color='blue')
+
+        ax.add_patch(vcc_spot)
+        ax.add_patch(probe_m1_spot)
+        ax.add_patch(probe_spot)
+
+        ax.add_patch(cc_spot)
+        ax.add_patch(pump_no_m1a_spot)
+        ax.add_patch(pump_no_m2b_spot)
+        ax.add_patch(pump_m1a_spot)
+        ax.add_patch(pump_m2b_spot)
+
+        ax.set_title("X-ray coming out of the screen")
+        ax.set_xlabel("x (mm)")
+        ax.set_ylabel("y (mm)")
+        ax.legend(loc=(1, 0))
+
+    def plot_beam_on_sample_yag(self, ax, aspect=None):
+
+        # Calculate the interaction point
+        probe_sample_traj, probe_kout, probe_path = self.get_raytracing_trajectory(path="probe sample")
+        pump_ref_traj, pump_ref_kout, pump_ref_path = self.get_raytracing_trajectory(path="cc sample")
+        pump_a_sample_traj, pump_a_kout, pump_a_path = self.get_raytracing_trajectory(path="pump a sample")
+        pump_b_sample_traj, pump_b_kout, pump_b_path = self.get_raytracing_trajectory(path="pump b sample")
+
+        # Define the rotation matrix
+        rot_mat = util.get_rotmat_around_axis(angleRadian=np.deg2rad(5), axis=np.array([1.0, 0, 0]))
+        rot_center = np.copy(self.sample.sample.surface_point)
+
+        # Define the object
+        tmp = np.dot(probe_sample_traj - rot_center, rot_mat.T)
+        probe_spot = patches.Circle((tmp[-1][2] / 1e3, tmp[-1][0] / 1e3),
+                                    radius=1, fill=False, edgecolor='green', label='probe')
+
+        tmp = np.dot(pump_ref_traj - rot_center, rot_mat.T)
+        pump_ref_spot = patches.Circle((tmp[-1][2] / 1e3, tmp[-1][0] / 1e3),
+                                       radius=1, fill=False, edgecolor='red')
+
+        tmp = np.dot(pump_a_sample_traj - rot_center, rot_mat.T)
+        pump_a_spot = patches.Circle((tmp[-1][2] / 1e3, tmp[-1][0] / 1e3),
+                                     radius=0.75, fill=False, edgecolor='red', label='pump a')
+
+        tmp = np.dot(pump_b_sample_traj - rot_center, rot_mat.T)
+        pump_b_spot = patches.Circle((tmp[-1][2] / 1e3, tmp[-1][0] / 1e3),
+                                     radius=0.5, fill=False, edgecolor='purple', label='pump b')
+
+        ax.plot(np.dot(self.sample.sample.boundary - rot_center, rot_mat.T)[:, 2] / 1e3,
+                np.dot(self.sample.sample.boundary - rot_center, rot_mat.T)[:, 0] / 1e3,
+                color='purple',
+                )
+        ax.plot(np.dot(self.sample.yag_sample.boundary - rot_center, rot_mat.T)[:, 2] / 1e3,
+                np.dot(self.sample.yag_sample.boundary - rot_center, rot_mat.T)[:, 0] / 1e3,
+                color='blue', )
+        ax.add_patch(probe_spot)
+        ax.add_patch(pump_ref_spot)
+        ax.add_patch(pump_a_spot)
+        ax.add_patch(pump_b_spot)
+
+        ax.set_title('Zyla 2')
+
+        if aspect:
+            ax.set_aspect(aspect)
+
+        ax.set_xlabel("horizontal (mm)")
+        ax.set_ylabel("vertical (mm)")
+        ax.legend()
+
+    def plot_m1_traj(self, ax, axis='yz', xlim=None, ylim=None):
+
+        # Get the most updated trajectory
+        vcc_traj, vcc_kout, vcc_pathlength = self.get_raytracing_trajectory(path="vcc")
+        probe_m1_traj, probe_m1_kout, probe_m1_pathlength = self.get_raytracing_trajectory(path="probe m1 only")
+        # probe_traj, kout, probe_pathlength = self.get_raytracing_trajectory(path="probe")
+
+        pump_ref_traj, pump_ref_kout, pump_ref_path = self.get_raytracing_trajectory(path="cc")
+        # pump_a_no_mirror_traj, kout, pump_a_path = self.get_raytracing_trajectory(path='pump a no mirror')
+        # pump_a_traj, kout, pump_a_path = self.get_raytracing_trajectory(path='pump a')
+        # pump_b_no_mirror_traj, kout, pump_a_path = self.get_raytracing_trajectory(path='pump b no mirror')
+        # pump_b_traj, kout, pump_a_path = self.get_raytracing_trajectory(path='pump b')
+        print("Perform ray tracing calculation at current motor position.")
+
+        if xlim is None:
+            xlim = [3900, 4100]
+        if ylim is None:
+            ylim = [-1, 1]
+
+        if axis == 'yz':
+            ax.plot(vcc_traj[:, 2] / 1e3, vcc_traj[:, 0] / 1e3,
+                    color='g', label='vcc')
+            ax.plot(pump_ref_traj[:, 2] / 1e3, pump_ref_traj[:, 0] / 1e3,
+                    color='r', label='cc')
+            ax.plot(probe_m1_traj[:, 2] / 1e3, probe_m1_traj[:, 0] / 1e3,
+                    color='g', linestyle='--', label='probe m1')
+            self.plot_optics(ax=ax, axis=axis, color='blue')
+
+        elif axis == 'xz':
+            ax.plot(vcc_traj[:, 2] / 1e3, vcc_traj[:, 1] / 1e3,
+                    color='g', label='vcc')
+            ax.plot(pump_ref_traj[:, 2] / 1e3, pump_ref_traj[:, 1] / 1e3,
+                    color='r', label='cc')
+            ax.plot(probe_m1_traj[:, 2] / 1e3, probe_m1_traj[:, 1] / 1e3,
+                    color='g', linstyle='--', label='probe m1')
+            self.plot_optics(ax=ax, axis=axis, color='blue')
+
+        else:
+            print("Please check the source code for the option for axis argument.")
+            print("The current one \'{}\' is not defined".format(axis))
+
+        ax.set_ylim(ylim)
+        ax.set_xlim(xlim)
+        ax.set_xlabel("{} axis (mm)".format(axis[1]))
+        ax.set_ylabel("{} axis (mm)".format(axis[0]))
+        ax.set_title('Mirror 1')
+        ax.legend()
+
+    def plot_si_traj(self, ax, axis='yz', xlim=None, ylim=None):
+
+        # Get the most updated trajectory
+        vcc_traj, vcc_kout, vcc_pathlength = self.get_raytracing_trajectory(path="vcc")
+        probe_m1_traj, probe_m1_kout, probe_m1_pathlength = self.get_raytracing_trajectory(path="probe m1 only")
+        probe_traj, kout, probe_pathlength = self.get_raytracing_trajectory(path="probe")
+
+        pump_ref_traj, pump_ref_kout, pump_ref_path = self.get_raytracing_trajectory(path="cc")
+        # pump_a_no_mirror_traj, kout, pump_a_path = self.get_raytracing_trajectory(path='pump a no mirror')
+        # pump_a_traj, kout, pump_a_path = self.get_raytracing_trajectory(path='pump a')
+        # pump_b_no_mirror_traj, kout, pump_a_path = self.get_raytracing_trajectory(path='pump b no mirror')
+        # pump_b_traj, kout, pump_a_path = self.get_raytracing_trajectory(path='pump b')
+        print("Perform ray tracing calculation at current motor position.")
+
+        if xlim is None:
+            xlim = [probe_traj[-1, 2] / 1e3 - 50, probe_traj[-1, 2] / 1e3 + 5]
+        if ylim is None:
+            ylim = [probe_traj[-1, 0] / 1e3 - 15, probe_traj[-1, 0] / 1e3 + 20]
+
+        if axis == 'yz':
+            ax.plot(vcc_traj[:, 2] / 1e3, vcc_traj[:, 0] / 1e3,
+                    color='g', label='vcc')
+            ax.plot(pump_ref_traj[:, 2] / 1e3, pump_ref_traj[:, 0] / 1e3,
+                    color='r', label='cc')
+            ax.plot(probe_m1_traj[:, 2] / 1e3, probe_m1_traj[:, 0] / 1e3,
+                    color='g', linestyle='--', label='probe m1')
+            ax.plot(probe_traj[:, 2] / 1e3, probe_traj[:, 0] / 1e3,
+                    color='g', linestyle='dotted', label='probe')
+
+            self.plot_optics(ax=ax, axis=axis, color='blue')
+
+        elif axis == 'xz':
+            ax.plot(vcc_traj[:, 2] / 1e3, vcc_traj[:, 1] / 1e3,
+                    color='g', label='vcc')
+            ax.plot(pump_ref_traj[:, 2] / 1e3, pump_ref_traj[:, 1] / 1e3,
+                    color='r', label='cc')
+            ax.plot(probe_m1_traj[:, 2] / 1e3, probe_m1_traj[:, 1] / 1e3,
+                    color='g', linstyle='--', label='probe m1')
+            ax.plot(probe_traj[:, 2] / 1e3, probe_traj[:, 1] / 1e3,
+                    color='g', linestyle='dotted', label='probe')
+
+            self.plot_optics(ax=ax, axis=axis, color='blue')
+
+        else:
+            print("Please check the source code for the option for axis argument.")
+            print("The current one \'{}\' is not defined".format(axis))
+
+        ax.set_ylim(ylim)
+        ax.set_xlim(xlim)
+        ax.set_xlabel("{} axis (mm)".format(axis[1]))
+        ax.set_ylabel("{} axis (mm)".format(axis[0]))
+        ax.set_title('silicon')
+        ax.legend(loc=(1,0))
+
+    def plot_tg_traj(self, ax, axis='yz', xlim=None, ylim=None):
+
+        # Get the most updated trajectory
+        vcc_traj, vcc_kout, vcc_pathlength = self.get_raytracing_trajectory(path="vcc")
+        probe_m1_traj, probe_m1_kout, probe_m1_pathlength = self.get_raytracing_trajectory(path="probe m1 only")
+        probe_traj, kout, probe_pathlength = self.get_raytracing_trajectory(path="probe")
+
+        pump_ref_traj, pump_ref_kout, pump_ref_path = self.get_raytracing_trajectory(path="cc")
+        pump_a_no_mirror_traj, kout, pump_a_path = self.get_raytracing_trajectory(path='pump a no mirror')
+        pump_a_traj, kout, pump_a_path = self.get_raytracing_trajectory(path='pump a')
+        pump_b_no_mirror_traj, kout, pump_a_path = self.get_raytracing_trajectory(path='pump b no mirror')
+        pump_b_traj, kout, pump_a_path = self.get_raytracing_trajectory(path='pump b')
+        print("Perform ray tracing calculation at current motor position.")
+
+        if xlim is None:
+            xlim = [7400, 7700]
+        if ylim is None:
+            ylim = [-5, 5]
+
+        if axis == 'yz':
+            ax.plot(vcc_traj[:, 2] / 1e3, vcc_traj[:, 0] / 1e3,
+                    color='g', label='vcc')
+            ax.plot(probe_traj[:, 2] / 1e3, probe_traj[:, 0] / 1e3,
+                    color='g', linestyle='dotted', label='probe')
+
+            ax.plot(pump_ref_traj[:, 2] / 1e3, pump_ref_traj[:, 0] / 1e3,
+                    color='r', label='cc')
+            ax.plot(pump_a_no_mirror_traj[:, 2] / 1e3, pump_a_no_mirror_traj[:, 0] / 1e3,
+                    linestyle='--', color='r', label='pump a')
+            ax.plot(pump_a_traj[:, 2] / 1e3, pump_a_traj[:, 0] / 1e3,
+                    linestyle='dotted', color='r', label='pump a')
+            ax.plot(pump_b_no_mirror_traj[:, 2] / 1e3, pump_b_no_mirror_traj[:, 0] / 1e3,
+                    linestyle='--', color='r', label='pump b')
+            ax.plot(pump_b_traj[:, 2] / 1e3, pump_b_traj[:, 0] / 1e3,
+                    linestyle='dotted', color='r', label='pump b')
+
+            self.plot_optics(ax=ax, axis=axis, color='blue')
+
+        elif axis == 'xz':
+            ax.plot(vcc_traj[:, 2] / 1e3, vcc_traj[:, 1] / 1e3,
+                    color='g', label='vcc')
+            ax.plot(probe_traj[:, 2] / 1e3, probe_traj[:, 1] / 1e3,
+                    color='g', linestyle='dotted', label='probe')
+
+            ax.plot(pump_ref_traj[:, 2] / 1e3, pump_ref_traj[:, 1] / 1e3,
+                    color='r', label='cc')
+            ax.plot(pump_a_no_mirror_traj[:, 2] / 1e3, pump_a_no_mirror_traj[:, 1] / 1e3,
+                    linestyle='--', color='r', label='pump a')
+            ax.plot(pump_a_traj[:, 2] / 1e3, pump_a_traj[:, 1] / 1e3,
+                    linestyle='dotted', color='r', label='pump a')
+            ax.plot(pump_b_no_mirror_traj[:, 2] / 1e3, pump_b_no_mirror_traj[:, 1] / 1e3,
+                    linestyle='--', color='r', label='pump b')
+            ax.plot(pump_b_traj[:, 2] / 1e3, pump_b_traj[:, 1] / 1e3,
+                    linestyle='dotted', color='r', label='pump b')
+
+            self.plot_optics(ax=ax, axis=axis, color='blue')
+
+        else:
+            print("Please check the source code for the option for axis argument.")
+            print("The current one \'{}\' is not defined".format(axis))
+
+        ax.set_ylim(ylim)
+        ax.set_xlim(xlim)
+        ax.set_xlabel("{} axis (mm)".format(axis[1]))
+        ax.set_ylabel("{} axis (mm)".format(axis[0]))
+        ax.set_title('Sample')
+        ax.legend(loc=(1,0))
 
     def get_diode(self):
         pass
