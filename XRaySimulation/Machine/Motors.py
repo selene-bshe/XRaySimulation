@@ -822,7 +822,7 @@ def get_motors_with_model_for_axis(model, rot_center_height=70e3, color='k', axi
         print("Create a XA10A motor, moving along x axis.")
         motor_obj = xyMotor(upperLim=12.5 * 1000,
                             lowerLim=-12.5 * 1000,
-                            res=1,
+                            res=0.5,
                             backlash=100,
                             speed_um_per_ps=1 * 1000 / 1e12,
                             dimension=[100e3, 100e3],
@@ -973,8 +973,8 @@ def get_motors_with_model_for_axis(model, rot_center_height=70e3, color='k', axi
 
     elif model == "RA05A":
         print("Create a {} motor, rotating around y axis.".format(model))
-        motor_obj = RotationMotor(upperLim=np.deg2rad(180),
-                                  lowerLim=-np.deg2rad(-180),
+        motor_obj = RotationMotor(upperLim=np.deg2rad(360),
+                                  lowerLim=-np.deg2rad(360),
                                   res=np.deg2rad(0.002),
                                   backlash=np.deg2rad(0.01),
                                   speed_rad_per_ps=np.deg2rad(0.1) / 1e12,

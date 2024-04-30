@@ -667,7 +667,7 @@ class XppController_TG:
             tower[3][:] = (np.copy(angles1), np.square(np.abs(reflect_sigma1)) / np.abs(b_factor1))
             kin = np.copy(kout1[index])
 
-    def get_raytracing_trajectory(self, path="mono", get_path_length='True'):
+    def get_raytracing_trajectory(self, path="mono", get_path_length='True', virtual_sample_plane=None):
 
         if path == "cc":
             defice_list = ([self.mono_t1.optics, self.mono_t2.optics, self.g1.grating_m1]
@@ -685,13 +685,15 @@ class XppController_TG:
             defice_list = ([self.mono_t1.optics, self.mono_t2.optics, self.g1.grating_m1]
                            + self.t1.optics.crystal_list + self.t6.optics.crystal_list
                            + [self.sample.sample, ])
+
+            if virtual_sample_plane is None:
+                virtual_sample_plane = np.copy(self.sample.sample.normal)
             trajectory, kout, pathlength = DeviceSimu.get_lightpath(device_list=defice_list,
                                                                     kin=self.gaussian_pulse.k0,
                                                                     initial_point=self.gaussian_pulse.x0,
                                                                     final_plane_point=
-                                                                    np.copy(self.sample.yag1.surface_point),
-                                                                    final_plane_normal=
-                                                                    np.copy(self.sample.yag1.normal))
+                                                                    np.copy(self.sample.sample.surface_point),
+                                                                    final_plane_normal=virtual_sample_plane)
 
         elif path == "vcc":
             defice_list = ([self.mono_t1.optics, self.mono_t2.optics, self.g1.grating_1]
@@ -791,36 +793,42 @@ class XppController_TG:
                            + self.t45.optics1.crystal_list + self.t45.optics2.crystal_list
                            + [self.m1.optics, self.si.optics, self.sample.sample])
 
+            if virtual_sample_plane is None:
+                virtual_sample_plane = np.copy(self.sample.sample.normal)
             trajectory, kout, pathlength = DeviceSimu.get_lightpath(device_list=defice_list,
                                                                     kin=self.gaussian_pulse.k0,
                                                                     initial_point=self.gaussian_pulse.x0,
                                                                     final_plane_point=
-                                                                    np.copy(self.sample.yag1.surface_point),
-                                                                    final_plane_normal=
-                                                                    np.copy(self.sample.yag1.normal))
+                                                                    np.copy(self.sample.sample.surface_point),
+                                                                    final_plane_normal=virtual_sample_plane)
 
         elif path == "pump a sample":
             defice_list = ([self.mono_t1.optics, self.mono_t2.optics, self.g1.grating_m1]
                            + self.t1.optics.crystal_list + self.t6.optics.crystal_list
                            + [self.tg_g.grating_m1, self.m2a.optics, self.sample.sample])
+
+            if virtual_sample_plane is None:
+                virtual_sample_plane = np.copy(self.sample.sample.normal)
             trajectory, kout, pathlength = DeviceSimu.get_lightpath(device_list=defice_list,
                                                                     kin=self.gaussian_pulse.k0,
                                                                     initial_point=self.gaussian_pulse.x0,
-                                                                    final_plane_point=np.copy(
-                                                                        self.sample.yag1.surface_point),
-                                                                    final_plane_normal=np.copy(self.sample.yag1.normal))
+                                                                    final_plane_point=
+                                                                    np.copy(self.sample.sample.surface_point),
+                                                                    final_plane_normal=virtual_sample_plane)
 
         elif path == "pump b sample":
             defice_list = ([self.mono_t1.optics, self.mono_t2.optics, self.g1.grating_m1]
                            + self.t1.optics.crystal_list + self.t6.optics.crystal_list
                            + [self.tg_g.grating_1, self.m2b.optics, self.sample.yag1])
+
+            if virtual_sample_plane is None:
+                virtual_sample_plane = np.copy(self.sample.sample.normal)
             trajectory, kout, pathlength = DeviceSimu.get_lightpath(device_list=defice_list,
                                                                     kin=self.gaussian_pulse.k0,
                                                                     initial_point=self.gaussian_pulse.x0,
-                                                                    final_plane_point=np.copy(
-                                                                        self.sample.yag1.surface_point),
-                                                                    final_plane_normal=np.copy(self.sample.yag1.normal))
-
+                                                                    final_plane_point=
+                                                                    np.copy(self.sample.sample.surface_point),
+                                                                    final_plane_normal=virtual_sample_plane)
 
         else:
             print("Warning, the specified path option is not defined.")
@@ -993,19 +1001,21 @@ class XppController_TG:
         # Define the rotation matrix
         rot_mat = util.get_rotmat_around_axis(angleRadian=np.deg2rad(5), axis=np.array([1.0, 0, 0]))
         rot_center = np.copy(self.sample.sample.surface_point)
+        # print(rot_mat)
 
         # Define the object
         tmp = np.dot(probe_sample_traj - rot_center, rot_mat.T)
+        # print(tmp)
         probe_spot = patches.Circle((tmp[-1][2] / 1e3, tmp[-1][0] / 1e3),
                                     radius=1, fill=False, edgecolor='green', label='probe')
 
         tmp = np.dot(pump_ref_traj - rot_center, rot_mat.T)
         pump_ref_spot = patches.Circle((tmp[-1][2] / 1e3, tmp[-1][0] / 1e3),
-                                       radius=1, fill=False, edgecolor='red')
+                                       radius=0.75, fill=False, edgecolor='black', label='cc')
 
         tmp = np.dot(pump_a_sample_traj - rot_center, rot_mat.T)
         pump_a_spot = patches.Circle((tmp[-1][2] / 1e3, tmp[-1][0] / 1e3),
-                                     radius=0.75, fill=False, edgecolor='red', label='pump a')
+                                     radius=0.5, fill=False, edgecolor='red', label='pump a')
 
         tmp = np.dot(pump_b_sample_traj - rot_center, rot_mat.T)
         pump_b_spot = patches.Circle((tmp[-1][2] / 1e3, tmp[-1][0] / 1e3),
@@ -1132,7 +1142,7 @@ class XppController_TG:
         ax.set_xlabel("{} axis (mm)".format(axis[1]))
         ax.set_ylabel("{} axis (mm)".format(axis[0]))
         ax.set_title('silicon')
-        ax.legend(loc=(1,0))
+        ax.legend(loc=(1, 0))
 
     def plot_tg_traj(self, ax, axis='yz', xlim=None, ylim=None):
 
@@ -1200,7 +1210,69 @@ class XppController_TG:
         ax.set_xlabel("{} axis (mm)".format(axis[1]))
         ax.set_ylabel("{} axis (mm)".format(axis[0]))
         ax.set_title('Sample')
-        ax.legend(loc=(1,0))
+        ax.legend(loc=(1, 0))
+
+    def get_beam_position_on_yag(self):
+        vcc_traj, vcc_kout, vcc_pathlength = self.get_raytracing_trajectory(path="vcc")
+        probe_m1_traj, probe_m1_kout, probe_m1_pathlength = self.get_raytracing_trajectory(path="probe m1 only")
+        probe_traj, kout, probe_pathlength = self.get_raytracing_trajectory(path="probe")
+
+        pump_ref_traj, pump_ref_kout, pump_ref_path = self.get_raytracing_trajectory(path="cc")
+        pump_a_no_mirror_traj, kout, pump_a_path = self.get_raytracing_trajectory(path='pump a no mirror')
+        pump_a_traj, kout, pump_a_path = self.get_raytracing_trajectory(path='pump a')
+        pump_b_no_mirror_traj, kout, pump_a_path = self.get_raytracing_trajectory(path='pump b no mirror')
+        pump_b_traj, kout, pump_a_path = self.get_raytracing_trajectory(path='pump b')
+
+        return {'vcc': vcc_traj[-1],
+                'probe m1': probe_m1_traj[-1],
+                'probe': probe_traj[-1],
+
+                'cc': pump_ref_traj[-1],
+                'pump a no mirror': pump_a_no_mirror_traj[-1],
+                'pump b no mirror': pump_b_no_mirror_traj[-1],
+                'pump a': pump_a_traj[-1],
+                'pump b': pump_b_traj[-1],
+                }
+
+    def get_beam_position_on_sample_yag(self):
+        probe_sample_traj, probe_kout, probe_path = self.get_raytracing_trajectory(path="probe sample")
+        pump_ref_traj, pump_ref_kout, pump_ref_path = self.get_raytracing_trajectory(path="cc sample")
+        pump_a_sample_traj, pump_a_kout, pump_a_path = self.get_raytracing_trajectory(path="pump a sample")
+        pump_b_sample_traj, pump_b_kout, pump_b_path = self.get_raytracing_trajectory(path="pump b sample")
+
+        return {'probe': probe_sample_traj[-1],
+                'cc': pump_ref_traj[-1],
+                'pump a': pump_a_sample_traj[-1],
+                'pump b': pump_b_sample_traj[-1],
+                }
+
+    def get_sample_path_length(self):
+        probe_sample_traj, probe_kout, probe_path = self.get_raytracing_trajectory(path="probe sample")
+        pump_ref_traj, pump_ref_kout, pump_ref_path = self.get_raytracing_trajectory(path="cc sample")
+        pump_a_sample_traj, pump_a_kout, pump_a_path = self.get_raytracing_trajectory(path="pump a sample")
+        pump_b_sample_traj, pump_b_kout, pump_b_path = self.get_raytracing_trajectory(path="pump b sample")
+
+        return {'probe': probe_path,
+                'cc': pump_ref_path,
+                'pump a': pump_a_path,
+                'pump b': pump_b_path,
+                }
+
+    def get_arrival_time(self):
+        probe_sample_traj, probe_kout, probe_path = self.get_raytracing_trajectory(
+            path="probe sample", virtual_sample_plane=np.array([0.0, 0.0, -1.0]))
+        pump_ref_traj, pump_ref_kout, pump_ref_path = self.get_raytracing_trajectory(
+            path="cc sample", virtual_sample_plane=np.array([0.0, 0.0, -1.0]))
+        pump_a_sample_traj, pump_a_kout, pump_a_path = self.get_raytracing_trajectory(
+            path="pump a sample", virtual_sample_plane=np.array([0.0, 0.0, -1.0]))
+        pump_b_sample_traj, pump_b_kout, pump_b_path = self.get_raytracing_trajectory(
+            path="pump b sample", virtual_sample_plane=np.array([0.0, 0.0, -1.0]))
+
+        return {'probe': probe_path,
+                'cc': pump_ref_path,
+                'pump a': pump_a_path,
+                'pump b': pump_b_path,
+                }
 
     def get_diode(self):
         pass
