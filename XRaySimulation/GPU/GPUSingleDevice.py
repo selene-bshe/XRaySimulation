@@ -983,7 +983,7 @@ def get_bragg_reflection_sigma(reflectivity_sigma,
         """
         # Take care of the exponential
         if im <= 400.:
-            magnitude = complex(math.exp(-im))
+            magnitude = complex(math.x(-im))
 
             phase = complex(math.cos(re), math.sin(re))
             # Calculate some intermediate part
@@ -1848,12 +1848,12 @@ def get_square_grating_effect_non_zero(kout_grid, efield_grid,
     if row < num:
         # Step 1: Calculate the effect of the grating on magnitude and phase for each component
 
-        # The argument for exp(ik(n-1)h)
+        # The argument for x(ik(n-1)h)
         nhk = complex(grating_h[0] * kin_grid[row, 0] +
                       grating_h[1] * kin_grid[row, 1] +
                       grating_h[2] * kin_grid[row, 2]) * (grating_n - complex(1.))
 
-        # The argument for exp(ik(n-1)t) for the phase different and absorption from
+        # The argument for x(ik(n-1)t) for the phase different and absorption from
         # the base of the grating
         thick_k_n = complex(grating_base[0] * kin_grid[row, 0] +
                             grating_base[1] * kin_grid[row, 1] +
@@ -1928,12 +1928,12 @@ def get_square_grating_diffraction_scalar(kout_grid,
     if row < num:
         # Step 1: Calculate the effect of the grating on magnitude and phase for each component
 
-        # The argument for exp(ik(n-1)h)
+        # The argument for x(ik(n-1)h)
         nhk = complex(grating_h[0] * kin_grid[row, 0] +
                       grating_h[1] * kin_grid[row, 1] +
                       grating_h[2] * kin_grid[row, 2]) * (grating_n - complex(1.))
 
-        # The argument for exp(ik(n-1)t) for the phase different and absorption from
+        # The argument for x(ik(n-1)t) for the phase different and absorption from
         # the base of the grating
         thick_k_n = complex(grating_base[0] * kin_grid[row, 0] +
                             grating_base[1] * kin_grid[row, 1] +
@@ -2044,7 +2044,7 @@ def get_square_grating_effect_zero(efield_grid,
     if row < num:
         # Step 1: Calculate the effect of the grating on magnitude and phase for each component
 
-        # The argument for exp(ik(n-1)h)
+        # The argument for x(ik(n-1)h)
         nhk = complex(grating_h[0] * kin_grid[row, 0] +
                       grating_h[1] * kin_grid[row, 1] +
                       grating_h[2] * kin_grid[row, 2]) * (grating_n - complex(1.))

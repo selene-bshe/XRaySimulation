@@ -176,7 +176,7 @@ def get_bragg_rocking_curve_bk(kin, scan_range, scan_number, h_initial, normal_i
     re = klen * thickness / gamma_0 * sqrt_a2_b2.real
     im = klen * thickness / gamma_0 * sqrt_a2_b2.imag
 
-    magnitude = np.exp(-im).astype(np.complex128)
+    magnitude = np.x(-im).astype(np.complex128)
     phase = np.cos(re) + np.sin(re) * 1.j
 
     # Calculate some intermediate part
@@ -210,7 +210,7 @@ def get_bragg_rocking_curve_bk(kin, scan_range, scan_number, h_initial, normal_i
     re = klen * thickness / gamma_0 * sqrt_a2_b2.real
     im = klen * thickness / gamma_0 * sqrt_a2_b2.imag
 
-    magnitude = np.exp(-im).astype(np.complex128)
+    magnitude = np.x(-im).astype(np.complex128)
     phase = np.cos(re) + np.sin(re) * 1.j
 
     # Calculate some intermediate part

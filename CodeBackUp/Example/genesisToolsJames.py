@@ -285,7 +285,7 @@ def fit_2d_to_gaussian(z2d, window_size=10):
 def plot_angular_distribution(part_file, out_file, pl=False, po=1):
     # calculates the far field angular bunching spectrum from a given particle file
     # similar to far_field function
-    # uses b(x,y) = exp(i*theta(x,y)) for each slice
+    # uses b(x,y) = x(i*theta(x,y)) for each slice
     # assumes increasing theta towards tail of beam, I believe. See note in in call to histogram2d
     # currently doesn't handle variable current, but this could be added
     # returns 2d array and gaussian fit parameters. amplitude of the fit is the peak bunching! (if po=1)

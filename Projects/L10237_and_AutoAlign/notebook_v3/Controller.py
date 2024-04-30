@@ -278,7 +278,7 @@ class XppController_TG:
 
     """
 
-    def __init__(self, photon_kev=9.8):
+    def __init__(self, photon_kev=9.8, gpu=False, gpuModule=False):
 
         fwhm = 200  # um
 
@@ -407,7 +407,8 @@ class XppController_TG:
         self.pixel_num_x = 2048
         self.pixel_num_y = 2048
 
-        # Add record
+        # -------------------------------------------------------------------
+        #      Keep record of the history or property of the setup
         self.record = []
         self.mono_t1_rocking = [np.zeros(10 ** 4), np.zeros(10 ** 4)]
         self.mono_t2_rocking = [np.zeros(10 ** 4), np.zeros(10 ** 4)]
@@ -418,6 +419,17 @@ class XppController_TG:
         self.t4_rocking = [np.zeros(10 ** 4), np.zeros(10 ** 4)]
         self.t5_rocking = [np.zeros(10 ** 4), np.zeros(10 ** 4)]
         self.t6_rocking = [np.zeros(10 ** 4), np.zeros(10 ** 4)]
+
+        # Save miniSD transmission function for a specified incident k vector
+        # notice that I only save this information for the 1D case.
+        # Saving this information for the 3D case is too expensive for the current situation.
+        self.crystal_transmission = {}
+        # -------------------------------------------------------------------
+
+        # ------------------------------------------------------------------
+        #   Load the external gpu module
+        if gpu:
+            self.gpuModule = gpuModule
 
     def align_xpp_mono(self):
 
@@ -1274,7 +1286,12 @@ class XppController_TG:
                 'pump b': pump_b_path,
                 }
 
-    def get_diode(self):
+    def get_diode(self, sase_pulse, gpu=False):
+        # Step 1: check if the sase pulse is 1D
+        if (len(sase_pulse.shape) == 1) and (not gpu):
+            # Perform the 1D calculation
+            pass
+
         pass
 
     def get_camera(self):

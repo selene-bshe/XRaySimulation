@@ -2,11 +2,110 @@ import numpy as np
 import time
 
 from XRaySimulation import util
+from datetime import datetime
 
 hbar = util.hbar  # This is the reduced planck constant in keV/fs
 c = util.c  # The speed of light in um / fs
 pi = util.pi
 two_pi = 2 * pi
+
+
+class saseSource:
+
+    def __init__(self,
+                 nx=32, ny=32, nz=1024,
+                 dx=4, dy=4, dz=0.1, Ec=9.8,
+                 n_gaussian=500,
+                 mode_size_x=200,
+                 mode_size_y=200,
+                 mode_size_z=0.15 * util.c,
+                 mode_center_spread_x=20,
+                 mode_center_spread_y=20,
+                 mode_center_spread_z=20 * util.c,
+                 x0=None):
+        self.n_gaussian = n_gaussian
+        self.modeSizeX = mode_size_x
+        self.modeSizeY = mode_size_y
+        self.modeSizeZ = mode_size_z
+        self.modeCenterSpreadX = mode_center_spread_x
+        self.modeCenterSpreadY = mode_center_spread_y
+        self.modeCenterSpreadZ = mode_center_spread_z
+        self.x0 = x0
+
+        self.nx = nx  # For y axis in XPP frame
+        self.ny = ny  # For x axis in XPP frame
+        self.nz = nz  # For z axis in XPP frame
+
+        self.dx = dx
+        self.dy = dy
+        self.dz = dz  # The total pulse duration is 50 fs in this simulation
+
+        wave_vec_len = util.kev_to_wavevec_length(energy=Ec)
+
+        self.wave_vec_len = wave_vec_len
+        self.wave_vec = np.array([0., 0., wave_vec_len], dtype=np.float64)
+
+        # Get kin grid
+        (xCoor, yCoor, zCoor, tCoor, kxCoor, kyCoor, kzCoor,
+         ExCoor, EyCoor, EzCoor) = util.get_coordinate(
+            nx=nx, ny=ny, nz=nz, dx=dx, dy=dy, dz=dz, k0=wave_vec_len)
+
+        self.xCoor = xCoor
+        self.yCoor = yCoor
+        self.zCoor = zCoor
+        self.tCoor = tCoor
+        self.kxCoor = kxCoor
+        self.kyCoor = kyCoor
+        self.kzCoor = kzCoor
+        self.ExCoor = ExCoor
+        self.EyCoor = EyCoor
+        self.EzCoor = EzCoor
+
+        self.coor_dict = {'xCoor': xCoor, 'yCoor': yCoor, 'zCoor': zCoor, 'tCoor': tCoor,
+                          'kxCoor': kxCoor, 'kyCoor': kyCoor, 'kzCoor': kzCoor,
+                          'ExCoor': ExCoor, 'EyCoor': EyCoor, 'EzCoor': EzCoor, }
+
+    def get_kin_grid(self):
+        kinGrid = np.zeros((self.nx, self.ny, self.nz, 3))
+        kinGrid[:, :, :, 0] = self.kxCoor[:, np.newaxis, np.newaxis]
+        kinGrid[:, :, :, 1] = self.kyCoor[np.newaxis, :, np.newaxis]
+        kinGrid[:, :, :, 2] = self.kzCoor[np.newaxis, np.newaxis, :]
+
+        return kinGrid
+
+    def get_sase_1d(self, randomSeed=None):
+
+        if randomSeed is None:
+            np.random.seed(datetime.now().timestamp())
+
+        sase_field = get_gaussian_mode_sum_1d(nz=self.nz,
+                                              dz=self.dz,
+                                              nGaussian=self.n_gaussian,
+                                              modeSizeZ=self.modeSizeZ,
+                                              modeCenterSpreadZ=self.modeCenterSpreadZ,
+                                              k0=self.wave_vec_len,
+                                              randomSeed=randomSeed)
+        return sase_field
+
+    def get_sase_3d(self, randomSeed=None):
+        if randomSeed is None:
+            np.random.seed(datetime.now().timestamp())
+        sase_field = getGaussianModeSum(nx=self.nx,
+                                        ny=self.ny,
+                                        nz=self.nz,
+                                        dx=self.dx,
+                                        dy=self.dy,
+                                        dz=self.dz,
+                                        nGaussian=self.n_gaussian,
+                                        modeSizeX=self.modeSizeX,
+                                        modeSizeY=self.modeSizeY,
+                                        modeSizeZ=self.modeSizeZ,
+                                        modeCenterSpreadX=self.modeCenterSpreadX,
+                                        modeCenterSpreadY=self.modeCenterSpreadY,
+                                        modeCenterSpreadZ=self.modeCenterSpreadZ,
+                                        k0=self.wave_vec_len,
+                                        randomSeed=randomSeed)
+        return sase_field
 
 
 class GaussianPulse3D:
@@ -177,8 +276,12 @@ def get_square_pulse_spectrum_smooth(k_grid, k0, a_val, b_val, c_val, scaling, s
 def getGaussianModeSum(nx, ny, nz,
                        dx, dy, dz,
                        nGaussian=50,
-                       modeSizeX=10, modeSizeY=10, modeSizeZ=0.9,
-                       modeCenterSpreadX=0.1, modeCenterSpreadY=0.1, modeCenterSpreadZ=1.5,
+                       modeSizeX=10,
+                       modeSizeY=10,
+                       modeSizeZ=0.9,
+                       modeCenterSpreadX=0.1,
+                       modeCenterSpreadY=0.1,
+                       modeCenterSpreadZ=1.5,
                        k0=100,
                        randomSeed=41):
     """
@@ -241,6 +344,47 @@ def getGaussianModeSum(nx, ny, nz,
 
     # Remove the overall carry frequency
     eField *= np.exp(-1.j * np.arange(nz) * dz * k0)[np.newaxis, np.newaxis, :]
+
+    return eField
+
+
+def get_gaussian_mode_sum_1d(nz, dz, nGaussian=50, modeSizeZ=0.9, modeCenterSpreadZ=1.5, k0=100, randomSeed=41):
+    """
+
+    :param nz:
+    :param dz:
+    :param nGaussian:
+    :param modeSizeZ:
+    :param modeCenterSpreadZ:
+    :param k0:
+    :param randomSeed:
+    :return:
+    """
+
+    # Generate a series of electric field mode
+    np.random.seed(randomSeed)
+    modeCenter = np.random.rand(nGaussian) - 0.5
+    modeCenter[:] *= modeCenterSpreadZ
+
+    modeMagnitude = np.random.rand(nGaussian) + 0.1
+    modePhaseCenter = np.random.rand(nGaussian) * np.pi * 2
+
+    # Electric Field
+    eField = np.zeros(nz, dtype=np.complex128)
+    coor = np.linspace(start=-nz * dz / 2, stop=nz * dz / 2, num=nz)
+    for modeIdx in range(nGaussian):
+        modeField = (np.exp(- np.square(coor - modeCenter[modeIdx]) / 2. / modeSizeZ ** 2)
+                     * modeMagnitude[modeIdx] / modeSizeZ / np.sqrt(np.pi))
+
+        # Create the phase
+        modePhase = np.arange(nz) * dz * k0 + modePhaseCenter[modeIdx]
+
+        # Add the mode to the electric field
+        eField.real += modeField * np.cos(modePhase)
+        eField.imag += modeField * np.sin(modePhase)
+
+    # Remove the overall carry frequency
+    eField *= np.exp(-1.j * np.arange(nz) * dz * k0)
 
     return eField
 

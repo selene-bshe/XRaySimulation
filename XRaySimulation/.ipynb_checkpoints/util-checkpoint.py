@@ -765,10 +765,10 @@ def get_grating_period(dtheta, klen_in):
 
 
 def get_square_grating_transmission(kin, height_vec, ab_ratio, base, refractive_index, order, grating_k):
-    # The argument for exp(ik(n-1)h)
+    # The argument for x(ik(n-1)h)
     nhk = np.dot(height_vec, kin).astype(np.complex128) * (refractive_index - complex(1.))
 
-    # The argument for exp(ik(n-1)t) for the phase different and absorption from
+    # The argument for x(ik(n-1)t) for the phase different and absorption from
     # the base of the grating
     thick_k_n = np.dot(base, kin).astype(np.complex128) * (refractive_index - complex(1.))
 
@@ -792,10 +792,10 @@ def get_square_grating_transmission(kin, height_vec, ab_ratio, base, refractive_
 
 
 def get_square_grating_0th_transmission(kin, height_vec, refractive_index, ab_ratio, base):
-    # The argument for exp(ik(n-1)h)
+    # The argument for x(ik(n-1)h)
     nhk = np.dot(height_vec, kin).astype(np.complex128) * (refractive_index - complex(1.))
 
-    # The argument for exp(ik(n-1)t) for the phase different and absorption from
+    # The argument for x(ik(n-1)t) for the phase different and absorption from
     # the base of the grating
     thick_k_n = np.dot(base, kin).astype(np.complex128) * (refractive_index - complex(1.))
 
