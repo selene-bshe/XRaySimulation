@@ -15,6 +15,8 @@ class saseSource:
     def __init__(self,
                  nx=32, ny=32, nz=1024,
                  dx=4, dy=4, dz=0.1, Ec=9.8,
+                 mean_pulse_energy_uJ=600,  # uJ.  10 uJ / 0.5eV * 30 eV = 600 uJ
+                 pulse_energy_sigma_uJ=100,  # SASE energy fluctuation. Not the fluctuation after the xpp mono
                  n_gaussian=500,
                  mode_size_x=200,
                  mode_size_y=200,
@@ -23,6 +25,10 @@ class saseSource:
                  mode_center_spread_y=20,
                  mode_center_spread_z=20 * util.c,
                  x0=None):
+
+        self.mean_pulse_energy_uJ = mean_pulse_energy_uJ
+        self.pulse_energy_sigma_uJ = pulse_energy_sigma_uJ
+
         self.n_gaussian = n_gaussian
         self.modeSizeX = mode_size_x
         self.modeSizeY = mode_size_y
@@ -85,7 +91,17 @@ class saseSource:
                                               modeCenterSpreadZ=self.modeCenterSpreadZ,
                                               k0=self.wave_vec_len,
                                               randomSeed=randomSeed)
-        return sase_field
+
+        # target energy
+        pulse_energy = min(5.0, np.random.normal(loc=self.mean_pulse_energy_uJ,
+                                                 scale=self.pulse_energy_sigma_uJ))
+
+        # Apply scaling to obtain the corresponding pulse energy
+        norm = np.linalg.norm(np.abs(sase_field))
+        scaling = np.sqrt(pulse_energy) / norm
+        scaling = complex(scaling, 0)
+
+        return sase_field * scaling, pulse_energy
 
     def get_sase_3d(self, randomSeed=None):
         if randomSeed is None:
@@ -105,6 +121,9 @@ class saseSource:
                                         modeCenterSpreadZ=self.modeCenterSpreadZ,
                                         k0=self.wave_vec_len,
                                         randomSeed=randomSeed)
+
+        print("The electric field is not normalized properly. Do not use this function.")
+
         return sase_field
 
 

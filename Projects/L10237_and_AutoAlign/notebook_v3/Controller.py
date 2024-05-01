@@ -3,6 +3,7 @@ This notebook tries to mimic the installation condition of the setup.
 """
 
 import sys
+import time
 
 sys.path.append("../../../../XRaySimulation")
 
@@ -42,229 +43,6 @@ dia111 = {'d': 2.0593 * 1e-4,
 g1_period = 1  # um
 g2_period = 1  # um
 tg_g_period = 1  # um
-
-
-def get_optics():
-    # Define gratings
-    g1_cc = Crystal.RectangleGrating(a=g1_period / 2.,
-                                     b=g1_period / 2.,
-                                     direction=np.array([-1., 0., 0.], dtype=np.float64),
-                                     surface_point=np.zeros(3),
-                                     order=1.)
-
-    g1_vcc = Crystal.RectangleGrating(a=g1_period / 2.,
-                                      b=g1_period / 2.,
-                                      direction=np.array([-1., 0., 0.], dtype=np.float64),
-                                      surface_point=np.zeros(3),
-                                      order=-1.)
-
-    g2_cc = Crystal.RectangleGrating(a=g2_period / 2.,
-                                     b=g2_period / 2.,
-                                     direction=np.array([0., 1., 0.], dtype=np.float64),
-                                     surface_point=np.zeros(3),
-                                     order=-1.)
-    g2_vcc = Crystal.RectangleGrating(a=g2_period / 2.,
-                                      b=g2_period / 2.,
-                                      direction=np.array([0., 1., 0.], dtype=np.float64),
-                                      surface_point=np.zeros(3),
-                                      order=1.)
-
-    tg_g_a = Crystal.RectangleGrating(a=tg_g_period / 2.,
-                                      b=tg_g_period / 2.,
-                                      surface_point=np.zeros(3),
-                                      order=1.)
-
-    tg_g_b = Crystal.RectangleGrating(a=tg_g_period / 2.,
-                                      b=tg_g_period / 2.,
-                                      surface_point=np.zeros(3),
-                                      order=-1.)
-
-    # Define total reflection mirrors
-    tg_mirror_pump_a = Crystal.TotalReflectionMirror(surface_point=np.zeros(3), normal=np.array([-1.0, 0, 0]))
-    tg_mirror_pump_b = Crystal.TotalReflectionMirror(surface_point=np.zeros(3), normal=np.array([-1.0, 0.0, 0]))
-    tg_mirror_probe = Crystal.TotalReflectionMirror(surface_point=np.zeros(3), normal=np.array([-1.0, 0, 0]))
-
-    # ------------------------------------------
-    #   Get crystal for XPP mono
-    # ------------------------------------------
-    mono_miscut = [np.deg2rad(0.0), np.deg2rad(0.0)]
-    mono_diamond = [Crystal.CrystalBlock3D(h=np.array([0., 2. * np.pi / dia111['d'], 0.]),
-                                           normal=np.array(
-                                               [0., -np.cos(mono_miscut[x]), np.sin(mono_miscut[x])]),
-                                           surface_point=np.zeros(3, dtype=np.float64),
-                                           thickness=10e3,
-                                           chi_dict=dia111,
-                                           edge_length=20e3) for x in range(2)]
-    mono_diamond[1].rotate_wrt_point(rot_mat=np.array([[1, 0, 0],
-                                                       [0, -1, 0],
-                                                       [0, 0, -1]], dtype=np.float64),
-                                     ref_point=np.copy(mono_diamond[1].surface_point))
-
-    # ------------------------------------------------
-    #    Get VCC
-    # Define Bragg crystals
-    vcc_channel_cut_config = ["lower left", 'upper left', 'upper left', 'lower left']
-    vcc_channel_cut_angles = np.deg2rad(np.array([[0, -5], [5., 0], [0, 5], [-5, 0]]))
-    vcc_channel_cut_edge_length_list = np.array([[50e3, 65.25e3],
-                                                 [65.25e3, 50e3, ],
-                                                 [50e3, 65.25e3],
-                                                 [65.25e3, 50e3, ],
-                                                 ])
-    vcc_channel_cuts = [Crystal.ChannelCut(crystal_type="Silicon",
-                                           miller_index="220",
-                                           thickness_list=np.array([1e4, 1e4]),
-                                           gap=13.595e3,
-                                           surface_center_offset=32.5e3,
-                                           edge_length_list=vcc_channel_cut_edge_length_list[_x],
-                                           asymmetry_angle_list=vcc_channel_cut_angles[_x],
-                                           first_surface_loc=vcc_channel_cut_config[_x],
-                                           source=None,
-                                           crystal_property=si220)
-                        for _x in range(4)]
-    # Shift the crystal such that the rotation center is at 0
-    vcc_channel_cuts[1].shift(displacement=np.copy(vcc_channel_cuts[1].crystal_list[1].surface_point))
-    vcc_channel_cuts[3].shift(displacement=np.copy(vcc_channel_cuts[3].crystal_list[1].surface_point))
-
-    # --------------------------------------------------
-    #   Get CC
-    cc_channel_cut_config = ["upper left", 'lower left', ]
-    cc_channel_cut_angles = np.deg2rad(np.array([[0, 0], [0, 0]]))
-    cc_channel_cut_edge_length_list = np.array([[40e3, 100e3],
-                                                [120e3, 15e3]])
-    cc_channel_cut_center_offset = [30e3, 52.5e3]
-    cc_channel_cut_gap = [25.15e3, 25.8e3]
-
-    cc_channel_cuts = [Crystal.ChannelCut(crystal_type="Silicon",
-                                          miller_index="220",
-                                          thickness_list=np.array([1e4, 1e4]),
-                                          gap=cc_channel_cut_gap[_x],
-                                          surface_center_offset=cc_channel_cut_center_offset[_x],
-                                          edge_length_list=cc_channel_cut_edge_length_list[_x],
-                                          asymmetry_angle_list=cc_channel_cut_angles[_x],
-                                          first_surface_loc=cc_channel_cut_config[_x],
-                                          source=None,
-                                          crystal_property=si220)
-                       for _x in range(2)]
-    cc_channel_cuts[1].shift(displacement=np.copy(vcc_channel_cuts[1].crystal_list[1].surface_point))
-
-    # Get the silicon 111 for the TG probe
-    tg_si111 = Crystal.CrystalBlock3D(h=np.array([np.pi * 2 / si111['d'], 0, 0], dtype=np.float64),
-                                      normal=np.array([-1., 0, 0.]),
-                                      surface_point=np.zeros(3),
-                                      thickness=1e4,
-                                      chi_dict=si111,
-                                      edge_length=2e4, )
-    tg_si111.boundary = np.array([[0, -10e3, -10e3, ],
-                                  [0, -10e3, 10e3, ],
-                                  [0, 10e3, 10e3, ],
-                                  [0, 10e3, -10e3, ],
-                                  [0, -10e3, -10e3, ], ])
-
-    # Create the YAG crystals
-    #  Later, I'll install the YAG camera. However, at this moment, I would like to use a
-    # simple implementation of the yag crystal as a place-holder to make the simulation work.
-    sample = Crystal.YAG()
-    yag_sample = Crystal.YAG()
-    yag1 = Crystal.YAG()
-    yag2 = Crystal.YAG()
-    yag3 = Crystal.YAG()
-
-    optics_dict = {"g1 cc": g1_cc,
-                   "g1 vcc": g1_vcc,
-                   "g2 cc": g2_cc,
-                   "g2 vcc": g2_vcc,
-                   "tg g a": tg_g_a,
-                   "tg g b": tg_g_b,
-                   "tg mirror pump a": tg_mirror_pump_a,
-                   "tg mirror pump b": tg_mirror_pump_b,
-                   "tg mirror probe": tg_mirror_probe,
-                   "tg si111": tg_si111,
-                   "cc1": cc_channel_cuts[0],
-                   "cc2": cc_channel_cuts[1],
-                   "vcc1": vcc_channel_cuts[0],
-                   "vcc2": vcc_channel_cuts[1],
-                   "vcc3": vcc_channel_cuts[2],
-                   "vcc4": vcc_channel_cuts[3],
-                   "yag sample": yag_sample,
-                   "yag1": yag1,
-                   "yag2": yag2,
-                   "yag3": yag3,
-                   "sample": sample,
-                   "xpp mono": mono_diamond,
-                   }
-    return optics_dict
-
-
-def assemble_motors_and_optics():
-    # Get all the optics
-    optics_all = get_optics()
-
-    # Get the XPP mono
-    monoT1 = MotorStack.CrystalTower_x_y_theta_chi(crystal=optics_all['xpp mono'][0],
-                                                   crystal_loc=np.copy(optics_all['xpp mono'][0].surface_point, ))
-
-    monoT2 = MotorStack.CrystalTower_x_y_theta_chi(crystal=optics_all['xpp mono'][1],
-                                                   crystal_loc=np.copy(optics_all['xpp mono'][1].surface_point, ))
-    # Get all the motors
-    t1 = MotorStack.CrystalTower_x_y_theta_chi(crystal=optics_all['cc1'],
-                                               crystal_loc=np.copy(optics_all['cc1'].crystal_list[0].surface_point, ))
-    t6 = MotorStack.CrystalTower_x_y_theta_chi(crystal=optics_all['cc2'],
-                                               crystal_loc=np.copy(optics_all['cc2'].crystal_list[1].surface_point, ))
-
-    # For the VCC branch
-    t2 = MotorStack.CrystalTower_x_y_theta_chi(crystal=optics_all['vcc1'],
-                                               crystal_loc=np.copy(optics_all['vcc1'].crystal_list[0].surface_point, ))
-    t3 = MotorStack.CrystalTower_x_y_theta_chi(crystal=optics_all['vcc2'],
-                                               crystal_loc=np.copy(optics_all['vcc2'].crystal_list[1].surface_point, ))
-    t45 = MotorStack.CrystalTower_miniSD_Scan(channelCut1=optics_all['vcc3'],
-                                              crystal_loc1=np.copy(optics_all['vcc3'].crystal_list[0].surface_point, ),
-                                              channelCut2=optics_all['vcc4'],
-                                              crystal_loc2=np.copy(optics_all['vcc4'].crystal_list[1].surface_point, ),
-                                              )
-
-    # Get the grating tower
-    g1 = MotorStack.Grating_tower(grating_1=optics_all['g1 cc'],
-                                  grating_m1=optics_all['g1 vcc'],
-                                  )
-    g2 = MotorStack.Grating_tower(grating_1=optics_all['g2 cc'],
-                                  grating_m1=optics_all['g2 vcc'], )
-
-    tg_g = MotorStack.Grating_tower(grating_1=optics_all['tg g a'],
-                                    grating_m1=optics_all['tg g b'], )
-
-    # Get the Mirror tower
-    m1 = MotorStack.Tower_x_y_pi(mirror=optics_all['tg mirror probe'], )
-    m2a = MotorStack.Mirror_tower1(mirror=optics_all['tg mirror pump a'])
-    m2b = MotorStack.Mirror_tower2(mirror=optics_all['tg mirror pump b'])
-
-    # Get the silicon tower
-    si = MotorStack.Silicon_tower(crystal=optics_all['tg si111'], )
-
-    # Get the sample tower
-    sample = MotorStack.TG_Sample_tower(sample=optics_all['sample'],
-                                        yag_sample=optics_all['yag sample'],
-                                        yag1=optics_all['yag1'],
-                                        yag2=optics_all['yag2'],
-                                        yag3=optics_all['yag3']
-                                        )
-
-    motor_stacks = {'t1': t1,
-                    't2': t2,
-                    't3': t3,
-                    't45': t45,
-                    't6': t6,
-                    'g1': g1,
-                    'g2': g2,
-                    'tg g': tg_g,
-                    'm1': m1,
-                    'm2a': m2a,
-                    'm2b': m2b,
-                    "si": si,
-                    'sample': sample,
-                    'mono t1': monoT1,
-                    'mono t2': monoT2}
-
-    return motor_stacks, optics_all
 
 
 class XppController_TG:
@@ -402,10 +180,39 @@ class XppController_TG:
         self.vcc_shutter = True
 
         # Step 5 Add diodes
+        # In the simulation, the normalization of the electric field is such that
+        # np.sum(np.square(np.abs(e_field))) = pulse energy in uJ
+        # therefore, this ratio is defined such that, for example, for ipm2, 10uJ => a value of 8000
+        self.diode_ratio = {'ipm2': 8000 / 10,  #
+                            'dg1': 3 / 10,  #
+                            'd1': 3 / 10,  #
+                            'd2': 3 / 10,  #
+                            'd3': 3 / 10,  #
+                            'd4': 3 / 10,  #
+                            'd5': 3 / 10,  #
+                            'd6': 3 / 10,  #
+                            'pump': 3 / 10,
+                            'probe': 3 / 10,
+                            }
+
+        self.diode_noise_level = {'ipm2': 100,  #
+                                  'dg1': 0.01,  #
+                                  'd1': 0.01,  #
+                                  'd2': 0.01,  #
+                                  'd3': 0.01,  #
+                                  'd4': 0.01,  #
+                                  'd5': 0.01,  #
+                                  'd6': 0.01,  #
+                                  'pump': 0.01,
+                                  'probe': 0.01,
+                                  }
 
         # Step 6 Add cameras
         self.pixel_num_x = 2048
         self.pixel_num_y = 2048
+
+        # -------------------------------------------------------------------
+        #   Information of the diode
 
         # -------------------------------------------------------------------
         #      Keep record of the history or property of the setup
@@ -423,7 +230,7 @@ class XppController_TG:
         # Save miniSD transmission function for a specified incident k vector
         # notice that I only save this information for the 1D case.
         # Saving this information for the 3D case is too expensive for the current situation.
-        self.crystal_transmission = {}
+        self.crystal_efficiency = None
         # -------------------------------------------------------------------
 
         # ------------------------------------------------------------------
@@ -1286,13 +1093,228 @@ class XppController_TG:
                 'pump b': pump_b_path,
                 }
 
-    def get_diode(self, sase_pulse, gpu=False):
-        # Step 1: check if the sase pulse is 1D
-        if (len(sase_pulse.shape) == 1) and (not gpu):
-            # Perform the 1D calculation
-            pass
+    def _get_diode(self, spectrum_intensity):
+        energy = np.sum(np.multiply(spectrum_intensity, self.crystal_efficiency['mono T2']))
+        result = {
+            "ipm2": get_diode_readout(pulse_energy=energy,
+                                      ratio=self.diode_ratio['ipm2'],
+                                      noise_level=self.diode_noise_level['ipm2'])}
 
-        pass
+        energy = np.sum(np.multiply(spectrum_intensity, self.crystal_efficiency['g1 1st order']))
+        result.update({
+            "dg1": get_diode_readout(pulse_energy=energy,
+                                     ratio=self.diode_ratio['dg1'],
+                                     noise_level=self.diode_noise_level['dg1'])})
+
+        energy = np.sum(np.multiply(spectrum_intensity, self.crystal_efficiency['cc1']))
+        result.update({
+            "d1": get_diode_readout(pulse_energy=energy,
+                                    ratio=self.diode_ratio['d1'],
+                                    noise_level=self.diode_noise_level['d1'])})
+
+        energy = np.sum(np.multiply(spectrum_intensity, self.crystal_efficiency['vcc1']))
+        result.update({
+            "d2": get_diode_readout(pulse_energy=energy,
+                                    ratio=self.diode_ratio['d2'],
+                                    noise_level=self.diode_noise_level['d2'])})
+
+        energy = np.sum(np.multiply(spectrum_intensity, self.crystal_efficiency['vcc2']))
+        result.update({
+            "d3": get_diode_readout(pulse_energy=energy,
+                                    ratio=self.diode_ratio['d3'],
+                                    noise_level=self.diode_noise_level['d3'])})
+
+        energy = np.sum(np.multiply(spectrum_intensity, self.crystal_efficiency['vcc3']))
+        result.update({
+            "vcc3": get_diode_readout(pulse_energy=energy,
+                                      ratio=self.diode_ratio['d4'],
+                                      noise_level=self.diode_noise_level['d4'])})
+
+        energy = np.sum(np.multiply(spectrum_intensity, self.crystal_efficiency['vcc4']))
+        result.update({
+            "vcc4": get_diode_readout(pulse_energy=energy,
+                                      ratio=self.diode_ratio['d5'],
+                                      noise_level=self.diode_noise_level['d5'])})
+
+        energy = np.sum(np.multiply(spectrum_intensity, self.crystal_efficiency['cc2']))
+        result.update({
+            "cc2": get_diode_readout(pulse_energy=energy,
+                                     ratio=self.diode_ratio['d6'],
+                                     noise_level=self.diode_noise_level['d6'])})
+
+        energy = np.sum(np.multiply(spectrum_intensity, self.crystal_efficiency['pump a']))
+        result.update({
+            "pump a": get_diode_readout(pulse_energy=energy,
+                                        ratio=self.diode_ratio['pump'],
+                                        noise_level=self.diode_noise_level['pump'])})
+
+        energy = np.sum(np.multiply(spectrum_intensity, self.crystal_efficiency['probe']))
+        result.update({
+            "si": get_diode_readout(pulse_energy=energy,
+                                    ratio=self.diode_ratio['probe'],
+                                    noise_level=self.diode_noise_level['probe'])})
+
+        result.update({
+            "d4": get_diode_readout(pulse_energy=0,
+                                    ratio=self.diode_ratio['d4'], noise_level=self.diode_noise_level['d4']),
+            "d5": get_diode_readout(pulse_energy=0,
+                                    ratio=self.diode_ratio['d5'], noise_level=self.diode_noise_level['d5']),
+            "d6": get_diode_readout(pulse_energy=0,
+                                    ratio=self.diode_ratio['d6'], noise_level=self.diode_noise_level['d6']),
+            "pump": get_diode_readout(pulse_energy=0,
+                                      ratio=self.diode_ratio['pump'], noise_level=self.diode_noise_level['pump']),
+            "probe": get_diode_readout(pulse_energy=0,
+                                       ratio=self.diode_ratio['probe'], noise_level=self.diode_noise_level['probe']),
+        })
+        if self.cc_shutter:
+            result['d6'] += result['cc2']
+            result['probe'] += result['si']
+        if self.vcc_shutter:
+            result['d4'] += result['vcc3']
+            result['d5'] += result['vcc4']
+            result['d6'] += result['vcc4']
+            result['pump'] += result['pump a']
+
+        return result
+
+    def get_diode(self, spectrum_intensity, k_grid, gpu=False, force=False):
+        # Step 1: check if the sase pulse is 1D
+        if (len(spectrum_intensity.shape) == 1) and (not gpu):
+            # Perform the 1D calculation
+            if np.max(np.abs(self.crystal_efficiency['kin_grid'] - k_grid)) > 1e-6:
+                print("The maximal difference between the kin_grid of the SASE pulse "
+                      "and the kin_grid of the energy efficiency is larger than 1e-6.")
+                print("Do not do the calculation unless setting force=True to force the calcluation.")
+                if force:
+                    result = self._get_diode(spectrum_intensity)
+                    return result
+                else:
+                    return 1
+            else:
+                result = self._get_diode(spectrum_intensity)
+                return result
+        else:
+            print("Current the gpu support is not implemented yet with this module.")
+            return 1
+
+    def get_crystal_reflectivity(self, k_grid):
+        """
+        Get the crystal reflectivity for the specified k_grid.
+        One should read this code carefully to decide if one wants to use this.
+        It is very subtle.
+
+        :param k_grid:
+        :return:
+        """
+
+        # Save the k_grid
+        self.crystal_efficiency.update({"kin_grid": np.copy(k_grid)})
+
+        # Mono T1
+        (reflect_sigma,
+         reflect_pi,
+         b_factor,
+         kout) = DeviceSimu.get_bragg_reflectivity_fix_crystal(kin=k_grid,
+                                                               thickness=self.mono_t1.optics.thickness,
+                                                               crystal_h=self.mono_t1.optics.h,
+                                                               normal=self.mono_t1.optics.normal,
+                                                               chi_dict=self.mono_t1.optics.chi_dict)
+
+        self.crystal_efficiency.update({"mono T1": np.square(np.abs(reflect_sigma)) / np.abs(b_factor)})
+
+        # Mono T2
+        (reflect_sigma,
+         reflect_pi,
+         b_factor,
+         kout) = DeviceSimu.get_bragg_reflectivity_fix_crystal(kin=kout,
+                                                               thickness=self.mono_t2.optics.thickness,
+                                                               crystal_h=self.mono_t2.optics.h,
+                                                               normal=self.mono_t2.optics.normal,
+                                                               chi_dict=self.mono_t2.optics.chi_dict)
+
+        self.crystal_efficiency.update({"mono T2": (np.square(np.abs(reflect_sigma)) / np.abs(b_factor)
+                                                    * self.crystal_efficiency['mono T1'])})
+
+        # G1 efficiency
+        mono_kout = np.copy(kout)
+        idx = mono_kout.shape[0] // 2
+        (factor, _, _) = util.get_square_grating_transmission(kin=mono_kout[idx],
+                                                              height_vec=self.g1.grating_1.h,
+                                                              ab_ratio=self.g1.grating_1.ab_ratio,
+                                                              base=self.g1.grating_1.thick_vec,
+                                                              refractive_index=self.g1.grating_1.n,
+                                                              order=1,
+                                                              grating_k=self.g1.grating_1.base_wave_vector)
+        factor = np.square(np.abs(factor))
+        self.crystal_efficiency.update({"g1 1st order": factor * self.crystal_efficiency['mono T2']})
+
+        # -----------------------------------------------------------------
+        # CC1 efficiency
+        kin = mono_kout + self.g1.grating_m1.momentum_transfer[np.newaxis, :]
+
+        (reflect_sigma, reflect_pi, b_factor, kout) = DeviceSimu.get_reflectivity_channel_cut(
+            kin_array=kin, channelCut=self.t1.optics)
+
+        reflectivity = np.square(np.abs(reflect_sigma)) / np.abs(b_factor)
+        self.crystal_efficiency.update({"cc1": reflectivity * self.crystal_efficiency['g1 1st order']})
+
+        # CC2 efficiency
+        (reflect_sigma, reflect_pi, b_factor, kout) = DeviceSimu.get_reflectivity_channel_cut(
+            kin_array=kout, channelCut=self.t6.optics)
+
+        reflectivity = np.square(np.abs(reflect_sigma)) / np.abs(b_factor)
+        self.crystal_efficiency.update({"cc2": reflectivity * self.crystal_efficiency['cc1']})
+
+        # Get pump a efficiency
+        cc_kout = np.copy(kout)
+        idx = cc_kout.shape[0] // 2
+        (factor, _, _) = util.get_square_grating_transmission(kin=cc_kout[idx],
+                                                              height_vec=self.tg_g.grating_m1.h,
+                                                              ab_ratio=self.tg_g.grating_m1.ab_ratio,
+                                                              base=self.tg_g.grating_m1.thick_vec,
+                                                              refractive_index=self.tg_g.grating_m1.n,
+                                                              order=1,
+                                                              grating_k=self.tg_g.grating_m1.base_wave_vector)
+        factor = np.square(np.abs(factor))
+        self.crystal_efficiency.update({"pump a": factor * self.crystal_efficiency['cc2']})
+
+        # ------------------------------------------------------------
+        # VCC1 efficiency
+        kin = mono_kout + self.g1.grating_1.momentum_transfer[np.newaxis, :]
+
+        (reflect_sigma, reflect_pi, b_factor, kout) = DeviceSimu.get_reflectivity_channel_cut(
+            kin_array=kin, channelCut=self.t2.optics)
+
+        reflectivity = np.square(np.abs(reflect_sigma)) / np.abs(b_factor)
+        self.crystal_efficiency.update({"vcc1": reflectivity * self.crystal_efficiency['g1 1st order']})
+
+        # VCC2 efficiency
+        (reflect_sigma, reflect_pi, b_factor, kout) = DeviceSimu.get_reflectivity_channel_cut(
+            kin_array=kout, channelCut=self.t3.optics)
+
+        reflectivity = np.square(np.abs(reflect_sigma)) / np.abs(b_factor)
+        self.crystal_efficiency.update({"vcc2": reflectivity * self.crystal_efficiency['vcc1']})
+
+        # VCC3 efficiency
+        (reflect_sigma, reflect_pi, b_factor, kout) = DeviceSimu.get_reflectivity_channel_cut(
+            kin_array=kout, channelCut=self.t45.optics1)
+
+        reflectivity = np.square(np.abs(reflect_sigma)) / np.abs(b_factor)
+        self.crystal_efficiency.update({"vcc3": reflectivity * self.crystal_efficiency['vcc2']})
+
+        # VCC 4 efficiency
+        (reflect_sigma, reflect_pi, b_factor, kout) = DeviceSimu.get_reflectivity_channel_cut(
+            kin_array=kout, channelCut=self.t45.optics2)
+
+        reflectivity = np.square(np.abs(reflect_sigma)) / np.abs(b_factor)
+        self.crystal_efficiency.update({"vcc4": reflectivity * self.crystal_efficiency['vcc3']})
+
+        # Probe efficiency
+        (reflect_sigma, reflect_pi, b_factor, kout) = DeviceSimu.get_reflectivity_channel_cut(
+            kin_array=kout, channelCut=self.si.optics)
+
+        reflectivity = np.square(np.abs(reflect_pi)) / np.abs(b_factor)
+        self.crystal_efficiency.update({"probe": reflectivity * self.crystal_efficiency['vcc4']})
 
     def get_camera(self):
         pass
@@ -1313,8 +1335,247 @@ class XppController_TG:
         self.vcc_shutter = False
         self.cc_shutter = False
 
+    def daq_get_diode(self):
+        pass
+
     # def save_operation_record(controller, file_name=None):
     #    if file_name is None:
     #        file_name = "~/Desktop/operation_record_{}.h5".format(util.time_stamp())
     #    with h5py.File(file_name, 'wb') as target:
     #        target.create_dataset(name='t1x', data=np.array(controller.record['t1x']))
+
+
+def get_diode_readout(pulse_energy, ratio, noise_level):
+    randomSeed = int(time.time() * 1e6) % 65536
+    np.random.seed(randomSeed)
+
+    reading = pulse_energy * ratio + noise_level * np.random.rand(1)
+
+    return reading
+
+
+def get_optics():
+    # Define gratings
+    g1_cc = Crystal.RectangleGrating(a=g1_period / 2.,
+                                     b=g1_period / 2.,
+                                     direction=np.array([-1., 0., 0.], dtype=np.float64),
+                                     surface_point=np.zeros(3),
+                                     order=1.)
+
+    g1_vcc = Crystal.RectangleGrating(a=g1_period / 2.,
+                                      b=g1_period / 2.,
+                                      direction=np.array([-1., 0., 0.], dtype=np.float64),
+                                      surface_point=np.zeros(3),
+                                      order=-1.)
+
+    g2_cc = Crystal.RectangleGrating(a=g2_period / 2.,
+                                     b=g2_period / 2.,
+                                     direction=np.array([0., 1., 0.], dtype=np.float64),
+                                     surface_point=np.zeros(3),
+                                     order=-1.)
+    g2_vcc = Crystal.RectangleGrating(a=g2_period / 2.,
+                                      b=g2_period / 2.,
+                                      direction=np.array([0., 1., 0.], dtype=np.float64),
+                                      surface_point=np.zeros(3),
+                                      order=1.)
+
+    tg_g_a = Crystal.RectangleGrating(a=tg_g_period / 2.,
+                                      b=tg_g_period / 2.,
+                                      surface_point=np.zeros(3),
+                                      order=1.)
+
+    tg_g_b = Crystal.RectangleGrating(a=tg_g_period / 2.,
+                                      b=tg_g_period / 2.,
+                                      surface_point=np.zeros(3),
+                                      order=-1.)
+
+    # Define total reflection mirrors
+    tg_mirror_pump_a = Crystal.TotalReflectionMirror(surface_point=np.zeros(3), normal=np.array([-1.0, 0, 0]))
+    tg_mirror_pump_b = Crystal.TotalReflectionMirror(surface_point=np.zeros(3), normal=np.array([-1.0, 0.0, 0]))
+    tg_mirror_probe = Crystal.TotalReflectionMirror(surface_point=np.zeros(3), normal=np.array([-1.0, 0, 0]))
+
+    # ------------------------------------------
+    #   Get crystal for XPP mono
+    # ------------------------------------------
+    mono_miscut = [np.deg2rad(0.0), np.deg2rad(0.0)]
+    mono_diamond = [Crystal.CrystalBlock3D(h=np.array([0., 2. * np.pi / dia111['d'], 0.]),
+                                           normal=np.array(
+                                               [0., -np.cos(mono_miscut[x]), np.sin(mono_miscut[x])]),
+                                           surface_point=np.zeros(3, dtype=np.float64),
+                                           thickness=10e3,
+                                           chi_dict=dia111,
+                                           edge_length=20e3) for x in range(2)]
+    mono_diamond[1].rotate_wrt_point(rot_mat=np.array([[1, 0, 0],
+                                                       [0, -1, 0],
+                                                       [0, 0, -1]], dtype=np.float64),
+                                     ref_point=np.copy(mono_diamond[1].surface_point))
+
+    # ------------------------------------------------
+    #    Get VCC
+    # Define Bragg crystals
+    vcc_channel_cut_config = ["lower left", 'upper left', 'upper left', 'lower left']
+    vcc_channel_cut_angles = np.deg2rad(np.array([[0, -5], [5., 0], [0, 5], [-5, 0]]))
+    vcc_channel_cut_edge_length_list = np.array([[50e3, 65.25e3],
+                                                 [65.25e3, 50e3, ],
+                                                 [50e3, 65.25e3],
+                                                 [65.25e3, 50e3, ],
+                                                 ])
+    vcc_channel_cuts = [Crystal.ChannelCut(crystal_type="Silicon",
+                                           miller_index="220",
+                                           thickness_list=np.array([1e4, 1e4]),
+                                           gap=13.595e3,
+                                           surface_center_offset=32.5e3,
+                                           edge_length_list=vcc_channel_cut_edge_length_list[_x],
+                                           asymmetry_angle_list=vcc_channel_cut_angles[_x],
+                                           first_surface_loc=vcc_channel_cut_config[_x],
+                                           source=None,
+                                           crystal_property=si220)
+                        for _x in range(4)]
+    # Shift the crystal such that the rotation center is at 0
+    vcc_channel_cuts[1].shift(displacement=np.copy(vcc_channel_cuts[1].crystal_list[1].surface_point))
+    vcc_channel_cuts[3].shift(displacement=np.copy(vcc_channel_cuts[3].crystal_list[1].surface_point))
+
+    # --------------------------------------------------
+    #   Get CC
+    cc_channel_cut_config = ["upper left", 'lower left', ]
+    cc_channel_cut_angles = np.deg2rad(np.array([[0, 0], [0, 0]]))
+    cc_channel_cut_edge_length_list = np.array([[40e3, 100e3],
+                                                [120e3, 15e3]])
+    cc_channel_cut_center_offset = [30e3, 52.5e3]
+    cc_channel_cut_gap = [25.15e3, 25.8e3]
+
+    cc_channel_cuts = [Crystal.ChannelCut(crystal_type="Silicon",
+                                          miller_index="220",
+                                          thickness_list=np.array([1e4, 1e4]),
+                                          gap=cc_channel_cut_gap[_x],
+                                          surface_center_offset=cc_channel_cut_center_offset[_x],
+                                          edge_length_list=cc_channel_cut_edge_length_list[_x],
+                                          asymmetry_angle_list=cc_channel_cut_angles[_x],
+                                          first_surface_loc=cc_channel_cut_config[_x],
+                                          source=None,
+                                          crystal_property=si220)
+                       for _x in range(2)]
+    cc_channel_cuts[1].shift(displacement=np.copy(vcc_channel_cuts[1].crystal_list[1].surface_point))
+
+    # Get the silicon 111 for the TG probe
+    tg_si111 = Crystal.CrystalBlock3D(h=np.array([np.pi * 2 / si111['d'], 0, 0], dtype=np.float64),
+                                      normal=np.array([-1., 0, 0.]),
+                                      surface_point=np.zeros(3),
+                                      thickness=1e4,
+                                      chi_dict=si111,
+                                      edge_length=2e4, )
+    tg_si111.boundary = np.array([[0, -10e3, -10e3, ],
+                                  [0, -10e3, 10e3, ],
+                                  [0, 10e3, 10e3, ],
+                                  [0, 10e3, -10e3, ],
+                                  [0, -10e3, -10e3, ], ])
+
+    # Create the YAG crystals
+    #  Later, I'll install the YAG camera. However, at this moment, I would like to use a
+    # simple implementation of the yag crystal as a place-holder to make the simulation work.
+    sample = Crystal.YAG()
+    yag_sample = Crystal.YAG()
+    yag1 = Crystal.YAG()
+    yag2 = Crystal.YAG()
+    yag3 = Crystal.YAG()
+
+    optics_dict = {"g1 cc": g1_cc,
+                   "g1 vcc": g1_vcc,
+                   "g2 cc": g2_cc,
+                   "g2 vcc": g2_vcc,
+                   "tg g a": tg_g_a,
+                   "tg g b": tg_g_b,
+                   "tg mirror pump a": tg_mirror_pump_a,
+                   "tg mirror pump b": tg_mirror_pump_b,
+                   "tg mirror probe": tg_mirror_probe,
+                   "tg si111": tg_si111,
+                   "cc1": cc_channel_cuts[0],
+                   "cc2": cc_channel_cuts[1],
+                   "vcc1": vcc_channel_cuts[0],
+                   "vcc2": vcc_channel_cuts[1],
+                   "vcc3": vcc_channel_cuts[2],
+                   "vcc4": vcc_channel_cuts[3],
+                   "yag sample": yag_sample,
+                   "yag1": yag1,
+                   "yag2": yag2,
+                   "yag3": yag3,
+                   "sample": sample,
+                   "xpp mono": mono_diamond,
+                   }
+    return optics_dict
+
+
+def assemble_motors_and_optics():
+    # Get all the optics
+    optics_all = get_optics()
+
+    # Get the XPP mono
+    monoT1 = MotorStack.CrystalTower_x_y_theta_chi(crystal=optics_all['xpp mono'][0],
+                                                   crystal_loc=np.copy(optics_all['xpp mono'][0].surface_point, ))
+
+    monoT2 = MotorStack.CrystalTower_x_y_theta_chi(crystal=optics_all['xpp mono'][1],
+                                                   crystal_loc=np.copy(optics_all['xpp mono'][1].surface_point, ))
+    # Get all the motors
+    t1 = MotorStack.CrystalTower_x_y_theta_chi(crystal=optics_all['cc1'],
+                                               crystal_loc=np.copy(optics_all['cc1'].crystal_list[0].surface_point, ))
+    t6 = MotorStack.CrystalTower_x_y_theta_chi(crystal=optics_all['cc2'],
+                                               crystal_loc=np.copy(optics_all['cc2'].crystal_list[1].surface_point, ))
+
+    # For the VCC branch
+    t2 = MotorStack.CrystalTower_x_y_theta_chi(crystal=optics_all['vcc1'],
+                                               crystal_loc=np.copy(optics_all['vcc1'].crystal_list[0].surface_point, ))
+    t3 = MotorStack.CrystalTower_x_y_theta_chi(crystal=optics_all['vcc2'],
+                                               crystal_loc=np.copy(optics_all['vcc2'].crystal_list[1].surface_point, ))
+    t45 = MotorStack.CrystalTower_miniSD_Scan(channelCut1=optics_all['vcc3'],
+                                              crystal_loc1=np.copy(optics_all['vcc3'].crystal_list[0].surface_point, ),
+                                              channelCut2=optics_all['vcc4'],
+                                              crystal_loc2=np.copy(optics_all['vcc4'].crystal_list[1].surface_point, ),
+                                              )
+
+    # Get the grating tower
+    g1 = MotorStack.Grating_tower(grating_1=optics_all['g1 cc'],
+                                  grating_m1=optics_all['g1 vcc'],
+                                  )
+    g2 = MotorStack.Grating_tower(grating_1=optics_all['g2 cc'],
+                                  grating_m1=optics_all['g2 vcc'], )
+
+    tg_g = MotorStack.Grating_tower(grating_1=optics_all['tg g a'],
+                                    grating_m1=optics_all['tg g b'], )
+
+    # Get the Mirror tower
+    m1 = MotorStack.Tower_x_y_pi(mirror=optics_all['tg mirror probe'], )
+    m2a = MotorStack.Mirror_tower1(mirror=optics_all['tg mirror pump a'])
+    m2b = MotorStack.Mirror_tower2(mirror=optics_all['tg mirror pump b'])
+
+    # Get the silicon tower
+    si = MotorStack.Silicon_tower(crystal=optics_all['tg si111'], )
+
+    # Get the sample tower
+    sample = MotorStack.TG_Sample_tower(sample=optics_all['sample'],
+                                        yag_sample=optics_all['yag sample'],
+                                        yag1=optics_all['yag1'],
+                                        yag2=optics_all['yag2'],
+                                        yag3=optics_all['yag3']
+                                        )
+
+    motor_stacks = {'t1': t1,
+                    't2': t2,
+                    't3': t3,
+                    't45': t45,
+                    't6': t6,
+                    'g1': g1,
+                    'g2': g2,
+                    'tg g': tg_g,
+                    'm1': m1,
+                    'm2a': m2a,
+                    'm2b': m2b,
+                    "si": si,
+                    'sample': sample,
+                    'mono t1': monoT1,
+                    'mono t2': monoT2}
+
+    return motor_stacks, optics_all
+
+
+def motionStack_and_optics_installation():
+    pass
