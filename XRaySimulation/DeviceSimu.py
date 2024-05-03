@@ -1621,3 +1621,23 @@ def get_intensity_on_YAG(intensity, intensity_coor, intensity_loc, pixel_coor):
                                     bounds_error=False,
                                     fill_value=0.)
     return yag_image
+
+
+def get_gaussian_on_yag(sigma_mat, beam_center, intensity, pixel_coor):
+    nx, ny = (pixel_coor['xCoor'].shape[0], pixel_coor['yCoor'].shape[0])
+
+    new_position_grid = np.zeros((nx, ny, 2))
+    new_position_grid[:, :, 0] = pixel_coor['xCoor'][:, np.newaxis]
+    new_position_grid[:, :, 1] = pixel_coor['yCoor'][np.newaxis, :]
+    new_position_grid_for_interpolation = np.reshape(new_position_grid, (nx * ny, 2))
+
+    # Get the intensity field
+    term1 = new_position_grid[:, :] - beam_center[np.newaxis, :]
+    term2 = np.dot(term1, np.linalg.inv(sigma_mat).T)
+    term = - np.sum(np.multiply(term1, term2), axis=-1) / 2.
+
+    # Get the Gaussian intensity
+    scaling = intensity / np.pi / 2. / np.sqrt(np.linalg.det(sigma_mat))
+    term *= scaling
+
+    return np.reshape(term, newshape=(nx, ny))

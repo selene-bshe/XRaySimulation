@@ -211,6 +211,9 @@ class XppController_TG:
         self.pixel_num_x = 2048
         self.pixel_num_y = 2048
 
+        self.pixel_coor_x = np.linspace(-self.pixel_num_x * 6.5 / 3, self.pixel_num_x * 6.5 / 3, self.pixel_num_x)
+        self.pixel_coor_y = np.linspace(-self.pixel_num_y * 6.5 / 3, self.pixel_num_y * 6.5 / 3, self.pixel_num_x)
+
         # -------------------------------------------------------------------
         #   Information of the diode
 
@@ -1197,127 +1200,150 @@ class XppController_TG:
             print("Current the gpu support is not implemented yet with this module.")
             return 1
 
-    def get_crystal_reflectivity(self, k_grid):
+    def get_zyla_1(self, sigma_mat, i_probe, i_pump_a, i_pump_b, i_pump_ref, beam_list=None):
         """
-        Get the crystal reflectivity for the specified k_grid.
-        One should read this code carefully to decide if one wants to use this.
-        It is very subtle.
+        Get the current beam profile on the YAG screen looking through the zyla camera
 
-        :param k_grid:
         :return:
         """
+        # Get the position on the YAG screen
+        # vcc_traj, vcc_kout, vcc_pathlength = self.get_raytracing_trajectory(path="vcc")
+        # probe_m1_traj, probe_m1_kout, probe_m1_pathlength = self.get_raytracing_trajectory(path="probe m1 only")
+        probe_traj, kout, probe_pathlength = self.get_raytracing_trajectory(path="probe")
 
-        # Save the k_grid
-        self.crystal_efficiency.update({"kin_grid": np.copy(k_grid)})
+        pump_ref_traj, pump_ref_kout, pump_ref_path = self.get_raytracing_trajectory(path="cc")
+        # pump_a_no_mirror_traj, kout, pump_a_path = self.get_raytracing_trajectory(path='pump a no mirror')
+        pump_a_traj, kout, pump_a_path = self.get_raytracing_trajectory(path='pump a')
+        # pump_b_no_mirror_traj, kout, pump_a_path = self.get_raytracing_trajectory(path='pump b no mirror')
+        pump_b_traj, kout, pump_a_path = self.get_raytracing_trajectory(path='pump b')
 
-        # Mono T1
-        (reflect_sigma,
-         reflect_pi,
-         b_factor,
-         kout) = DeviceSimu.get_bragg_reflectivity_fix_crystal(kin=k_grid,
-                                                               thickness=self.mono_t1.optics.thickness,
-                                                               crystal_h=self.mono_t1.optics.h,
-                                                               normal=self.mono_t1.optics.normal,
-                                                               chi_dict=self.mono_t1.optics.chi_dict)
+        if beam_list is None:
+            beam_list = ("probe", 'pump a', 'pump b')
 
-        self.crystal_efficiency.update({"mono T1": np.square(np.abs(reflect_sigma)) / np.abs(b_factor)})
+        yag_image = np.zeros((self.pixel_num_x, self.pixel_num_y))
+        # Get the pixel coordinate
+        pixel_coor_x = self.pixel_num_x + self.sample.yag1.surface_point[1]
+        pixel_coor_y = self.pixel_num_x + self.sample.yag1.surface_point[0]
 
-        # Mono T2
-        (reflect_sigma,
-         reflect_pi,
-         b_factor,
-         kout) = DeviceSimu.get_bragg_reflectivity_fix_crystal(kin=kout,
-                                                               thickness=self.mono_t2.optics.thickness,
-                                                               crystal_h=self.mono_t2.optics.h,
-                                                               normal=self.mono_t2.optics.normal,
-                                                               chi_dict=self.mono_t2.optics.chi_dict)
+        if 'probe' in beam_list:
+            # Get the relative position of the X-ray with respect to the yag center
+            position_relative = (probe_traj[-1] - self.sample.yag1.surface_point)
+            beam_center = np.array([position_relative[1], position_relative[0]], dtype=np.float64)
 
-        self.crystal_efficiency.update({"mono T2": (np.square(np.abs(reflect_sigma)) / np.abs(b_factor)
-                                                    * self.crystal_efficiency['mono T1'])})
+            yag_image += DeviceSimu.get_gaussian_on_yag(sigma_mat=sigma_mat,
+                                                        beam_center=beam_center,
+                                                        intensity=i_probe,
+                                                        pixel_coor={'xCoor': pixel_coor_y,
+                                                                    'yCoor': pixel_coor_x, })
 
-        # G1 efficiency
-        mono_kout = np.copy(kout)
-        idx = mono_kout.shape[0] // 2
-        (factor, _, _) = util.get_square_grating_transmission(kin=mono_kout[idx],
-                                                              height_vec=self.g1.grating_1.h,
-                                                              ab_ratio=self.g1.grating_1.ab_ratio,
-                                                              base=self.g1.grating_1.thick_vec,
-                                                              refractive_index=self.g1.grating_1.n,
-                                                              order=1,
-                                                              grating_k=self.g1.grating_1.base_wave_vector)
-        factor = np.square(np.abs(factor))
-        self.crystal_efficiency.update({"g1 1st order": factor * self.crystal_efficiency['mono T2']})
+        if 'pump a' in beam_list:
+            # Get the relative position of the X-ray with respect to the yag center
+            position_relative = (pump_a_traj[-1] - self.sample.yag1.surface_point)
+            beam_center = np.array([position_relative[1], position_relative[0]], dtype=np.float64)
 
-        # -----------------------------------------------------------------
-        # CC1 efficiency
-        kin = mono_kout + self.g1.grating_m1.momentum_transfer[np.newaxis, :]
+            yag_image += DeviceSimu.get_gaussian_on_yag(sigma_mat=sigma_mat,
+                                                        beam_center=beam_center,
+                                                        intensity=i_pump_a,
+                                                        pixel_coor={'xCoor': pixel_coor_y,
+                                                                    'yCoor': pixel_coor_x, })
 
-        (reflect_sigma, reflect_pi, b_factor, kout) = DeviceSimu.get_reflectivity_channel_cut(
-            kin_array=kin, channelCut=self.t1.optics)
+        if 'pump b' in beam_list:
+            # Get the relative position of the X-ray with respect to the yag center
+            position_relative = (pump_b_traj[-1] - self.sample.yag1.surface_point)
+            beam_center = np.array([position_relative[1], position_relative[0]], dtype=np.float64)
 
-        reflectivity = np.square(np.abs(reflect_sigma)) / np.abs(b_factor)
-        self.crystal_efficiency.update({"cc1": reflectivity * self.crystal_efficiency['g1 1st order']})
+            yag_image += DeviceSimu.get_gaussian_on_yag(sigma_mat=sigma_mat,
+                                                        beam_center=beam_center,
+                                                        intensity=i_pump_b,
+                                                        pixel_coor={'xCoor': pixel_coor_y,
+                                                                    'yCoor': pixel_coor_x, })
+        if 'pump ref' in beam_list:
+            # Get the relative position of the X-ray with respect to the yag center
+            position_relative = (pump_ref_traj[-1] - self.sample.yag1.surface_point)
+            beam_center = np.array([position_relative[1], position_relative[0]], dtype=np.float64)
 
-        # CC2 efficiency
-        (reflect_sigma, reflect_pi, b_factor, kout) = DeviceSimu.get_reflectivity_channel_cut(
-            kin_array=kout, channelCut=self.t6.optics)
+            yag_image += DeviceSimu.get_gaussian_on_yag(sigma_mat=sigma_mat,
+                                                        beam_center=beam_center,
+                                                        intensity=i_pump_ref,
+                                                        pixel_coor={'xCoor': pixel_coor_y,
+                                                                    'yCoor': pixel_coor_x, })
 
-        reflectivity = np.square(np.abs(reflect_sigma)) / np.abs(b_factor)
-        self.crystal_efficiency.update({"cc2": reflectivity * self.crystal_efficiency['cc1']})
+        return yag_image
 
-        # Get pump a efficiency
-        cc_kout = np.copy(kout)
-        idx = cc_kout.shape[0] // 2
-        (factor, _, _) = util.get_square_grating_transmission(kin=cc_kout[idx],
-                                                              height_vec=self.tg_g.grating_m1.h,
-                                                              ab_ratio=self.tg_g.grating_m1.ab_ratio,
-                                                              base=self.tg_g.grating_m1.thick_vec,
-                                                              refractive_index=self.tg_g.grating_m1.n,
-                                                              order=1,
-                                                              grating_k=self.tg_g.grating_m1.base_wave_vector)
-        factor = np.square(np.abs(factor))
-        self.crystal_efficiency.update({"pump a": factor * self.crystal_efficiency['cc2']})
+    def get_zyla_2(self, sigma_mat, i_probe, i_pump_a, i_pump_b, i_pump_ref, beam_list=None):
+        """
+        Get the current beam profile on the YAG screen looking through the zyla camera
 
-        # ------------------------------------------------------------
-        # VCC1 efficiency
-        kin = mono_kout + self.g1.grating_1.momentum_transfer[np.newaxis, :]
+        :return:
+        """
+        if beam_list is None:
+            beam_list = ("probe", 'pump a', 'pump b')
 
-        (reflect_sigma, reflect_pi, b_factor, kout) = DeviceSimu.get_reflectivity_channel_cut(
-            kin_array=kin, channelCut=self.t2.optics)
+        # Get the position on the YAG screen
+        probe_traj, kout, probe_pathlength = self.get_raytracing_trajectory(path="probe")
 
-        reflectivity = np.square(np.abs(reflect_sigma)) / np.abs(b_factor)
-        self.crystal_efficiency.update({"vcc1": reflectivity * self.crystal_efficiency['g1 1st order']})
+        pump_ref_traj, pump_ref_kout, pump_ref_path = self.get_raytracing_trajectory(path="cc")
+        pump_a_traj, kout, pump_a_path = self.get_raytracing_trajectory(path='pump a')
+        pump_b_traj, kout, pump_a_path = self.get_raytracing_trajectory(path='pump b')
 
-        # VCC2 efficiency
-        (reflect_sigma, reflect_pi, b_factor, kout) = DeviceSimu.get_reflectivity_channel_cut(
-            kin_array=kout, channelCut=self.t3.optics)
+        rot_mat = util.get_rotmat_around_axis(angleRadian=np.deg2rad(5), axis=np.array([1.0, 0, 0]))
 
-        reflectivity = np.square(np.abs(reflect_sigma)) / np.abs(b_factor)
-        self.crystal_efficiency.update({"vcc2": reflectivity * self.crystal_efficiency['vcc1']})
+        (sigma_mat_yag,
+         long,
+         short,
+         mag_factor) = get_beam_profile_on_yag_sample(rot_mat=rot_mat,
+                                                      kin=kout[-1],
+                                                      beam_size=np.sqrt(sigma_mat[0, 0]))
 
-        # VCC3 efficiency
-        (reflect_sigma, reflect_pi, b_factor, kout) = DeviceSimu.get_reflectivity_channel_cut(
-            kin_array=kout, channelCut=self.t45.optics1)
+        yag_image = np.zeros((self.pixel_num_x, self.pixel_num_y))
+        # Get the pixel coordinate
+        pixel_coor_x = self.pixel_num_x + self.sample.yag1.surface_point[1]
+        pixel_coor_y = self.pixel_num_x + self.sample.yag1.surface_point[0]
 
-        reflectivity = np.square(np.abs(reflect_sigma)) / np.abs(b_factor)
-        self.crystal_efficiency.update({"vcc3": reflectivity * self.crystal_efficiency['vcc2']})
+        if 'probe' in beam_list:
+            # Get the relative position of the X-ray with respect to the yag center
+            position_relative = np.dot(rot_mat, (probe_traj[-1] - self.sample.yag1.surface_point))
+            beam_center = np.array([position_relative[1], position_relative[0]], dtype=np.float64)
 
-        # VCC 4 efficiency
-        (reflect_sigma, reflect_pi, b_factor, kout) = DeviceSimu.get_reflectivity_channel_cut(
-            kin_array=kout, channelCut=self.t45.optics2)
+            yag_image += DeviceSimu.get_gaussian_on_yag(sigma_mat=sigma_mat_yag,
+                                                        beam_center=beam_center,
+                                                        intensity=i_probe,
+                                                        pixel_coor={'xCoor': pixel_coor_y,
+                                                                    'yCoor': pixel_coor_x, })
 
-        reflectivity = np.square(np.abs(reflect_sigma)) / np.abs(b_factor)
-        self.crystal_efficiency.update({"vcc4": reflectivity * self.crystal_efficiency['vcc3']})
+        if 'pump a' in beam_list:
+            # Get the relative position of the X-ray with respect to the yag center
+            position_relative = np.dot(rot_mat, (pump_a_traj[-1] - self.sample.yag1.surface_point))
+            beam_center = np.array([position_relative[1], position_relative[0]], dtype=np.float64)
 
-        # Probe efficiency
-        (reflect_sigma, reflect_pi, b_factor, kout) = DeviceSimu.get_reflectivity_channel_cut(
-            kin_array=kout, channelCut=self.si.optics)
+            yag_image += DeviceSimu.get_gaussian_on_yag(sigma_mat=sigma_mat_yag,
+                                                        beam_center=beam_center,
+                                                        intensity=i_pump_a,
+                                                        pixel_coor={'xCoor': pixel_coor_y,
+                                                                    'yCoor': pixel_coor_x, })
 
-        reflectivity = np.square(np.abs(reflect_pi)) / np.abs(b_factor)
-        self.crystal_efficiency.update({"probe": reflectivity * self.crystal_efficiency['vcc4']})
+        if 'pump b' in beam_list:
+            # Get the relative position of the X-ray with respect to the yag center
+            position_relative = np.dot(rot_mat, (pump_b_traj[-1] - self.sample.yag1.surface_point))
+            beam_center = np.array([position_relative[1], position_relative[0]], dtype=np.float64)
 
-    def get_camera(self):
-        pass
+            yag_image += DeviceSimu.get_gaussian_on_yag(sigma_mat=sigma_mat_yag,
+                                                        beam_center=beam_center,
+                                                        intensity=i_pump_b,
+                                                        pixel_coor={'xCoor': pixel_coor_y,
+                                                                    'yCoor': pixel_coor_x, })
+        if 'pump ref' in beam_list:
+            # Get the relative position of the X-ray with respect to the yag center
+            position_relative = np.dot(rot_mat, (pump_ref_traj[-1] - self.sample.yag1.surface_point))
+            beam_center = np.array([position_relative[1], position_relative[0]], dtype=np.float64)
+
+            yag_image += DeviceSimu.get_gaussian_on_yag(sigma_mat=sigma_mat_yag,
+                                                        beam_center=beam_center,
+                                                        intensity=i_pump_ref,
+                                                        pixel_coor={'xCoor': pixel_coor_y,
+                                                                    'yCoor': pixel_coor_x, })
+
+        return yag_image
 
     def show_cc(self):
         self.cc_shutter = True
@@ -1334,15 +1360,6 @@ class XppController_TG:
     def show_neither(self):
         self.vcc_shutter = False
         self.cc_shutter = False
-
-    def daq_get_diode(self):
-        pass
-
-    # def save_operation_record(controller, file_name=None):
-    #    if file_name is None:
-    #        file_name = "~/Desktop/operation_record_{}.h5".format(util.time_stamp())
-    #    with h5py.File(file_name, 'wb') as target:
-    #        target.create_dataset(name='t1x', data=np.array(controller.record['t1x']))
 
 
 def get_diode_readout(pulse_energy, ratio, noise_level):
@@ -1579,3 +1596,28 @@ def assemble_motors_and_optics():
 
 def motionStack_and_optics_installation():
     pass
+
+
+def get_beam_profile_on_yag_sample(rot_mat, kin, beam_size):
+    # Go the reference frame where the 0 is vertical direction, 2 is parallel to the yag horizontal edge
+    # and 1 is normal to the yag surface
+    kin_new = np.dot(rot_mat, kin)
+
+    # Get the incident angle with the wavevector and the YAG normal
+    angle = np.arcsin(kin_new[1] / np.linalg.norm((kin_new)))
+
+    # mag factor
+    mag_factor = 1 / np.sin(angle)
+
+    # Get the long axis
+    long = np.array([kin_new[0], kin_new[2]])
+    long /= np.linalg.norm(long)
+    long *= mag_factor * beam_size
+
+    short = np.array([kin_new[2], -kin_new[0]])
+    short /= np.linalg.norm(short)
+    short *= beam_size
+
+    sigma_mat = np.outer(long, long) + np.outer(short, short)
+
+    return sigma_mat, long, short, mag_factor
