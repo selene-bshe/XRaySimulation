@@ -378,12 +378,12 @@ class XppController_TG:
         Motors.install_motors_on_breadboard(motor_stack=self.sample.all_obj, breadboard=self.breadboard3,
                                             diag_hole_idx1=(5, 23), diag_hole_idx2=(8, 28))
 
-        # print("test", self.si.optics.surface_point)
+        # print("test", controller.si.optics.surface_point)
         displacement = np.array([412.7e3 + 60e3, 0.0, 0.0])
         for item in self.si.all_obj:
             item.shift(displacement=displacement)
 
-        # print("test", self.si.optics.surface_point)
+        # print("test", controller.si.optics.surface_point)
 
         # Install the gratings
         # Assume that there is no need to align the gratings

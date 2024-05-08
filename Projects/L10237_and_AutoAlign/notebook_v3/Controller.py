@@ -156,7 +156,7 @@ class XppController_TG:
         for item in self.sample.all_obj:
             item.shift(displacement=displacement)
 
-        # print("test", self.si.optics.surface_point)
+        # print("test", controller.si.optics.surface_point)
         displacement = np.array([412.7e3 + 60e3, 25e3, 0.0])
         for item in self.si.all_obj:
             item.shift(displacement=displacement)
@@ -869,13 +869,13 @@ class XppController_TG:
         # Get the most updated trajectory
         vcc_traj, vcc_kout, vcc_pathlength = self.get_raytracing_trajectory(path="vcc")
         probe_m1_traj, probe_m1_kout, probe_m1_pathlength = self.get_raytracing_trajectory(path="probe m1 only")
-        # probe_traj, kout, probe_pathlength = self.get_raytracing_trajectory(path="probe")
+        # probe_traj, kout, probe_pathlength = controller.get_raytracing_trajectory(path="probe")
 
         pump_ref_traj, pump_ref_kout, pump_ref_path = self.get_raytracing_trajectory(path="cc")
-        # pump_a_no_mirror_traj, kout, pump_a_path = self.get_raytracing_trajectory(path='pump a no mirror')
-        # pump_a_traj, kout, pump_a_path = self.get_raytracing_trajectory(path='pump a')
-        # pump_b_no_mirror_traj, kout, pump_a_path = self.get_raytracing_trajectory(path='pump b no mirror')
-        # pump_b_traj, kout, pump_a_path = self.get_raytracing_trajectory(path='pump b')
+        # pump_a_no_mirror_traj, kout, pump_a_path = controller.get_raytracing_trajectory(path='pump a no mirror')
+        # pump_a_traj, kout, pump_a_path = controller.get_raytracing_trajectory(path='pump a')
+        # pump_b_no_mirror_traj, kout, pump_a_path = controller.get_raytracing_trajectory(path='pump b no mirror')
+        # pump_b_traj, kout, pump_a_path = controller.get_raytracing_trajectory(path='pump b')
         print("Perform ray tracing calculation at current motor position.")
 
         if xlim is None:
@@ -920,10 +920,10 @@ class XppController_TG:
         probe_traj, kout, probe_pathlength = self.get_raytracing_trajectory(path="probe")
 
         pump_ref_traj, pump_ref_kout, pump_ref_path = self.get_raytracing_trajectory(path="cc")
-        # pump_a_no_mirror_traj, kout, pump_a_path = self.get_raytracing_trajectory(path='pump a no mirror')
-        # pump_a_traj, kout, pump_a_path = self.get_raytracing_trajectory(path='pump a')
-        # pump_b_no_mirror_traj, kout, pump_a_path = self.get_raytracing_trajectory(path='pump b no mirror')
-        # pump_b_traj, kout, pump_a_path = self.get_raytracing_trajectory(path='pump b')
+        # pump_a_no_mirror_traj, kout, pump_a_path = controller.get_raytracing_trajectory(path='pump a no mirror')
+        # pump_a_traj, kout, pump_a_path = controller.get_raytracing_trajectory(path='pump a')
+        # pump_b_no_mirror_traj, kout, pump_a_path = controller.get_raytracing_trajectory(path='pump b no mirror')
+        # pump_b_traj, kout, pump_a_path = controller.get_raytracing_trajectory(path='pump b')
         print("Perform ray tracing calculation at current motor position.")
 
         if xlim is None:
@@ -1207,14 +1207,14 @@ class XppController_TG:
         :return:
         """
         # Get the position on the YAG screen
-        # vcc_traj, vcc_kout, vcc_pathlength = self.get_raytracing_trajectory(path="vcc")
-        # probe_m1_traj, probe_m1_kout, probe_m1_pathlength = self.get_raytracing_trajectory(path="probe m1 only")
+        # vcc_traj, vcc_kout, vcc_pathlength = controller.get_raytracing_trajectory(path="vcc")
+        # probe_m1_traj, probe_m1_kout, probe_m1_pathlength = controller.get_raytracing_trajectory(path="probe m1 only")
         probe_traj, kout, probe_pathlength = self.get_raytracing_trajectory(path="probe")
 
         pump_ref_traj, pump_ref_kout, pump_ref_path = self.get_raytracing_trajectory(path="cc")
-        # pump_a_no_mirror_traj, kout, pump_a_path = self.get_raytracing_trajectory(path='pump a no mirror')
+        # pump_a_no_mirror_traj, kout, pump_a_path = controller.get_raytracing_trajectory(path='pump a no mirror')
         pump_a_traj, kout, pump_a_path = self.get_raytracing_trajectory(path='pump a')
-        # pump_b_no_mirror_traj, kout, pump_a_path = self.get_raytracing_trajectory(path='pump b no mirror')
+        # pump_b_no_mirror_traj, kout, pump_a_path = controller.get_raytracing_trajectory(path='pump b no mirror')
         pump_b_traj, kout, pump_a_path = self.get_raytracing_trajectory(path='pump b')
 
         if beam_list is None:

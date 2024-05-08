@@ -156,14 +156,20 @@ def get_rotmat_around_axis(angleRadian, axis):
     newAxis = np.zeros(3, dtype=np.float64)
     newAxis[0] = 1.0
 
-    if np.linalg.norm(newAxis - axis) < 1e-12:
+    # print(newAxis)
+
+    if np.linalg.norm(np.cross(newAxis, axis)) < 1e-12:
         # If this relative is valid, then axis[0] ~ 1 while  axis[1] = axis[2] = 0
         newAxis[0] = 0.0
         newAxis[1] = 1.0
 
+    # print(newAxis)
+
     # Step 2: remove the projection of the newAxis on the axis direction
     newAxis -= axis * np.dot(axis, newAxis)
     newAxis /= np.linalg.norm(newAxis)
+
+    # print(newAxis)
 
     # Step 2: get the other vector though cross project
     newAxis2 = np.cross(axis, newAxis)

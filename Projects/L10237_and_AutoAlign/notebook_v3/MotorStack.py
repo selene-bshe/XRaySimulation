@@ -467,7 +467,7 @@ class Mirror_tower2:
         self.all_obj = install_motors_on_motor_or_adaptors(motor_tower=self.all_obj, motor_or_adaptor=self.adapter3)
         self.all_obj = install_motors_on_motor_or_adaptors(motor_tower=self.all_obj, motor_or_adaptor=self.roll)
 
-        # print("test: current surface point", self.optics.surface_point)
+        # print("test: current surface point", controller.optics.surface_point)
         # Everything above is copied from the mirror tower 1 class
         # Here I need to rotate the components to get the correct geometry
         # First rotate around the y axis
@@ -476,7 +476,7 @@ class Mirror_tower2:
                             [0, 0, -1], ])
         for item in self.all_obj:
             item.rotate_wrt_point(rot_mat=rot_mat, ref_point=self.roll.bottom_mount_pos)
-        # print("test: current surface point", self.optics.surface_point)
+        # print("test: current surface point", controller.optics.surface_point)
 
         # Adjust the dimension of adaptor 2
         self.adapter2.bottom_mount_pos[2] = -75e3

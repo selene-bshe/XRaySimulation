@@ -77,8 +77,10 @@ class xyMotor:
                                   np.array([0, -dimension[0] / 2, -dimension[1] / 2]),
                                   ])
 
-        self.motion_dir = np.zeros(3, dtype=np.float64)
-        self.motion_dir[1] = 1.0
+        self.default_motion_dir = np.zeros(3, dtype=np.float64)
+        self.default_motion_dir[1] = 1.0
+        self.motion_dir = np.copy(self.default_motion_dir)
+
         self.top_mount_dir = np.array([1.0, 0, 0, ])  # the normal direction of the top mounting surface
         self.top_mount_pos = np.array([height, 0, 0, ])  # The center of the top mounting surface
         self.bottom_mount_dir = np.array([1.0, 0, 0, ])  # the normal direction of the top mounting surface
@@ -101,6 +103,7 @@ class xyMotor:
         self.top_mount_dir = np.ascontiguousarray(rot_mat.dot(self.top_mount_dir))
         self.bottom_mount_dir = np.ascontiguousarray(rot_mat.dot(self.bottom_mount_dir))
 
+        self.default_motion_dir = np.ascontiguousarray(rot_mat.dot(self.default_motion_dir))
         self.motion_dir = np.ascontiguousarray(rot_mat.dot(self.motion_dir))
         self.boundary = np.asanyarray(np.dot(self.boundary, rot_mat.T))
 
@@ -137,7 +140,7 @@ class xyMotor:
                 self.control_location = target
 
                 # The motion time
-                motion_time = delta / self.control_speed
+                motion_time = abs(delta / self.control_speed)
 
                 return motion_time, physical_motion
 
@@ -167,7 +170,7 @@ class xyMotor:
                     # Step 4: Change the status in the control system
                     self.control_location = target
 
-                    motion_time = (2 * self.control_backlash + delta) / self.control_speed
+                    motion_time = abs((2 * self.control_backlash + delta) / self.control_speed)
                     return motion_time, motion_record
 
                 else:
@@ -186,6 +189,16 @@ class xyMotor:
             return True
         else:
             return False
+
+    def set_positive(self, motion='positive'):
+        if motion == "positive":
+            self.control_positive = 1.
+            self.motion_dir = self.control_positive * self.default_motion_dir
+        elif motion == "negative":
+            self.control_positive = -1.
+            self.motion_dir = self.control_positive * self.default_motion_dir
+        else:
+            print("motion can only be positive or negative")
 
 
 class zMotor:
@@ -234,8 +247,10 @@ class zMotor:
                                   np.array([0, -dimension[0] / 2, -dimension[1] / 2]),
                                   ])
 
-        self.motion_dir = np.zeros(3, dtype=np.float64)
-        self.motion_dir[0] = 1.0
+        self.default_motion_dir = np.zeros(3, dtype=np.float64)
+        self.default_motion_dir[0] = 1.0
+        self.motion_dir = np.copy(self.default_motion_dir)
+
         self.top_mount_dir = np.array([1.0, 0, 0, ])  # the normal direction of the top mounting surface
         self.top_mount_pos = np.array([height, 0, 0, ])  # The center of the top mounting surface
         self.bottom_mount_dir = np.array([1.0, 0, 0, ])  # the normal direction of the top mounting surface
@@ -257,6 +272,7 @@ class zMotor:
         self.top_mount_dir = np.ascontiguousarray(rot_mat.dot(self.top_mount_dir))
         self.bottom_mount_dir = np.ascontiguousarray(rot_mat.dot(self.bottom_mount_dir))
 
+        self.default_motion_dir = np.ascontiguousarray(rot_mat.dot(self.default_motion_dir))
         self.motion_dir = np.ascontiguousarray(rot_mat.dot(self.motion_dir))
         self.boundary = np.asanyarray(np.dot(self.boundary, rot_mat.T))
 
@@ -282,7 +298,7 @@ class zMotor:
 
                 # Get the physical displacement of the table
                 physical_motion = delta + self.res * (np.random.rand() - 0.5)
-                physical_motion = physical_motion * self.control_positive * self.motion_dir
+                physical_motion = physical_motion * self.motion_dir
 
                 # Move the stage table
                 self.top_mount_pos = self.top_mount_pos + physical_motion
@@ -292,7 +308,7 @@ class zMotor:
                 # Step 4: Change the status in the control system
                 self.control_location = target
                 # The motion time
-                motion_time = delta / self.control_speed
+                motion_time = abs(delta / self.control_speed)
 
                 return motion_time, physical_motion
 
@@ -301,14 +317,14 @@ class zMotor:
                 if self.__check_limit(val=self.control_location + self.control_backlash + delta):
                     # Get the physical displacement of the table
                     physical_motion = self.control_backlash + delta + self.res * (np.random.rand() - 0.5)
-                    physical_motion = physical_motion * self.control_positive * self.motion_dir
+                    physical_motion = physical_motion * self.motion_dir
                     motion_record = np.copy(physical_motion)
                     # Move the stage table
                     self.top_mount_pos = self.top_mount_pos + physical_motion
 
                     # Get the physical displacement of the table
                     physical_motion = -self.control_backlash + self.res * (np.random.rand() - 0.5)
-                    physical_motion = physical_motion * self.control_positive * self.motion_dir
+                    physical_motion = physical_motion * self.motion_dir
                     motion_record += physical_motion
                     # Move the stage table
                     self.top_mount_pos = self.top_mount_pos + physical_motion
@@ -318,7 +334,7 @@ class zMotor:
                     # Step 4: Change the status in the control system
                     self.control_location = target
 
-                    motion_time = (2 * self.control_backlash + delta) / self.control_speed
+                    motion_time = abs((2 * self.control_backlash + delta) / self.control_speed)
                     return motion_time, motion_record
 
                 else:
@@ -337,6 +353,16 @@ class zMotor:
             return True
         else:
             return False
+
+    def set_positive(self, motion='positive'):
+        if motion == "positive":
+            self.control_positive = 1.
+            self.motion_dir = self.control_positive * self.default_motion_dir
+        elif motion == "negative":
+            self.control_positive = -1.
+            self.motion_dir = self.control_positive * self.default_motion_dir
+        else:
+            print("motion can only be positive or negative")
 
 
 class RotationMotor:
@@ -371,14 +397,19 @@ class RotationMotor:
         self.control_limits[1] = upperLim
         self.control_location = 0.0  # rad
 
+        self.control_positive = 1.
+
         self.control_backlash = backlash
         self.control_speed = speed_rad_per_ps
         self.res = res
 
         self.deg0direction = np.zeros(3, dtype=np.float64)
         self.deg0direction[1] = 1.0
-        self.rotation_axis = np.zeros(3, dtype=np.float64)
-        self.rotation_axis[0] = 1.0
+
+        self.default_rotation_axis = np.zeros(3, dtype=np.float64)
+        self.default_rotation_axis[0] = 1.0
+        self.rotation_axis = np.copy(self.default_rotation_axis)
+
         self.rotation_center = np.zeros(3, dtype=np.float64)
         self.rotation_center[0] = height
 
@@ -409,6 +440,7 @@ class RotationMotor:
         self.rotation_center = np.ascontiguousarray(rot_mat.dot(self.rotation_center))
         self.rotation_axis = np.ascontiguousarray(rot_mat.dot(self.rotation_axis))
 
+        self.default_rotation_axis= np.ascontiguousarray(rot_mat.dot(self.default_rotation_axis))
         self.top_mount_dir = np.dot(rot_mat, self.top_mount_dir)
         self.top_mount_pos = np.dot(rot_mat, self.top_mount_pos)
         self.bottom_mount_dir = np.dot(rot_mat, self.bottom_mount_dir)
@@ -432,7 +464,7 @@ class RotationMotor:
         if self.__check_limit(val=target):
 
             # Step 2: if it is with in the limit, then consider the back-clash effect
-            delta = target - self.control_location
+            delta = (target - self.control_location)
 
             if delta * self.control_backlash <= 0:  # Move to the opposite direction as the back-clash direction
 
@@ -450,7 +482,7 @@ class RotationMotor:
                                                                         np.rad2deg(target)))
                 self.control_location = target
 
-                motion_time = delta / self.control_speed
+                motion_time = abs(delta / self.control_speed)
                 return motion_time, rotMat
 
             else:
@@ -472,7 +504,7 @@ class RotationMotor:
                                                                             np.rad2deg(target)))
                     self.control_location = target
 
-                    motion_time = (2 * self.control_backlash + delta) / self.control_speed
+                    motion_time = abs((2 * self.control_backlash + delta) / self.control_speed)
                     return motion_time, np.dot(rotMat2, rotMat1)
 
                 else:
@@ -494,6 +526,14 @@ class RotationMotor:
             return True
         else:
             return False
+
+    def set_positive(self, motion='positive'):
+        if motion == "positive":
+            self.control_positive = 1.
+            self.rotation_axis = self.control_positive * self.default_rotation_axis
+        elif motion == "negative":
+            self.control_positive = -1.
+            self.rotation_axis = self.control_positive * self.default_rotation_axis
 
 
 class SwivalMotor:
@@ -529,14 +569,19 @@ class SwivalMotor:
         self.control_limits[1] = upperLim
         self.control_location = 0.0  # rad
 
+        self.control_positive = 1
+
         self.control_backlash = backlash
         self.control_speed = speed_rad_per_ps
         self.res = res
 
         self.deg0direction = np.zeros(3, dtype=np.float64)
         self.deg0direction[0] = 1.0
-        self.rotation_axis = np.zeros(3, dtype=np.float64)
-        self.rotation_axis[2] = 1.0
+
+        self.default_rotation_axis = np.zeros(3, dtype=np.float64)
+        self.default_rotation_axis[2] = 1.0
+        self.rotation_axis = np.copy(self.default_rotation_axis)
+
         self.rotation_center = np.zeros(3, dtype=np.float64)
         self.rotation_center[0] = rot_center_height + height
 
@@ -567,6 +612,7 @@ class SwivalMotor:
         self.rotation_center = np.ascontiguousarray(rot_mat.dot(self.rotation_center))
         self.rotation_axis = np.ascontiguousarray(rot_mat.dot(self.rotation_axis))
 
+        self.default_rotation_axis= np.ascontiguousarray(rot_mat.dot(self.default_rotation_axis))
         self.top_mount_dir = np.dot(rot_mat, self.top_mount_dir)
         self.top_mount_pos = np.dot(rot_mat, self.top_mount_pos)
         self.bottom_mount_dir = np.dot(rot_mat, self.bottom_mount_dir)
@@ -607,7 +653,7 @@ class SwivalMotor:
                                                                         np.rad2deg(target)))
                 self.control_location = target
 
-                motion_time = delta / self.control_speed
+                motion_time = abs(delta) / self.control_speed
                 return motion_time, rotMat
 
             else:
@@ -630,7 +676,7 @@ class SwivalMotor:
                                                                             np.rad2deg(target)))
                     self.control_location = target
 
-                    motion_time = (2 * self.control_backlash + delta) / self.control_speed
+                    motion_time = abs((2 * self.control_backlash + delta) / self.control_speed)
                     return motion_time, np.dot(rotMat2, rotMat1)
 
                 else:
@@ -649,6 +695,14 @@ class SwivalMotor:
             return True
         else:
             return False
+
+    def set_positive(self, motion='positive'):
+        if motion == "positive":
+            self.control_positive = 1.
+            self.rotation_axis = self.control_positive * self.default_rotation_axis
+        elif motion == "negative":
+            self.control_positive = -1.
+            self.rotation_axis = self.control_positive * self.default_rotation_axis
 
 
 class Breadboard:

@@ -428,6 +428,8 @@ def get_rocking_curve_channelcut_around_axis(kin,
 
     for idx in range(scan_number):
         rot_mat = util.get_rotmat_around_axis(angleRadian=angles[idx], axis=rotation_axis)
+        # print(rot_mat)
+        # print(np.linalg.det(rot_mat))
 
         h_array_1[idx] = rot_mat.dot(channelcut.crystal_list[0].h)
         normal_array_1[idx] = rot_mat.dot(channelcut.crystal_list[0].normal)
