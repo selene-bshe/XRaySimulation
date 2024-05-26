@@ -292,34 +292,35 @@ def get_square_pulse_spectrum_smooth(k_grid, k0, a_val, b_val, c_val, scaling, s
     return np.multiply(spectrum, gaussian)
 
 
-def getGaussianModeSum(nx, ny, nz,
-                       dx, dy, dz,
-                       nGaussian=50,
-                       modeSizeX=10,
-                       modeSizeY=10,
-                       modeSizeZ=0.9,
-                       modeCenterSpreadX=0.1,
-                       modeCenterSpreadY=0.1,
-                       modeCenterSpreadZ=1.5,
-                       k0=100,
+# Unit is fs, um, and keV
+def getGaussianModeSum(nx=128, ny=128, nz=1024,
+                       dx=4, dy=4, dz=0.1,
+                       nGaussian=1000,
+                       modeSizeX=200,
+                       modeSizeY=200,
+                       modeSizeZ=0.1 * 299792458. * 1e-9,  # Pulse coherence lenght of 100 as to um
+                       modeCenterSpreadX=10,   # you can play with this prameter a bit. Anything between 1 um to 20 um is possible physically.
+                       modeCenterSpreadY=10,  # you can play with this prameter a bit. Anything between 1 um to 20 um is possible physically.
+                       modeCenterSpreadZ=10 * 299792458. * 1e-9,  # 10fs pulse duration to um
+                       k0=12.4 / 10 * 1e4,
                        randomSeed=41):
     """
 
-    :param nx:
-    :param ny:
-    :param nz:
-    :param dx:
-    :param dy:
-    :param dz:
-    :param nGaussian:
-    :param modeSizeX:
-    :param modeSizeY:
-    :param modeSizeZ:
-    :param modeCenterSpreadX:
-    :param modeCenterSpreadY:
-    :param modeCenterSpreadZ:
-    :param k0:
-    :param randomSeed:
+    :param nx:  number of pixels along x axis (horizontal)
+    :param ny:  number of pixels along y axis (vertical pointing to the roof)
+    :param nz:  Number of pixel along the z axis (beam propagation direection)
+    :param dx:   Pixel size in um
+    :param dy:   Pixel size in um
+    :param dz:   pixel size in um
+    :param nGaussian:   Number of Gaussian mode to add to. Anything larger than 1000 is okay visually.
+    :param modeSizeX:   Size of the Gausssian mode along the x axis
+    :param modeSizeY:   Size of the Gausssian mode along the y axis
+    :param modeSizeZ:   Size of the Gausssian mode along the z axis
+    :param modeCenterSpreadX:   The FWHM if the spread of the cetner of the mode along X axis
+    :param modeCenterSpreadY:   The FWHM if the spread of the cetner of the mode along y axis
+    :param modeCenterSpreadZ:   The FWHM if the spread of the cetner of the mode along z axis
+    :param k0:     Center wave-vector = 12.4 / E_keV * 1e4   (i.e. angular wave-number of the carrier frequency in um^-1)
+    :param randomSeed:  Random seed.
     :return:
     """
 

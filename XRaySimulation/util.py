@@ -153,31 +153,29 @@ def get_rotmat_around_axis(angleRadian, axis):
     axis /= np.linalg.norm(axis)
 
     # Step 1: get a vector that is not parallel with the axis
-    newAxis = np.zeros(3, dtype=np.float64)
-    newAxis[0] = 1.0
+    new_axis = np.zeros(3, dtype=np.float64)
+    new_axis[0] = 1.0
 
-    # print(newAxis)
-
-    if np.linalg.norm(np.cross(newAxis, axis)) < 1e-12:
+    if np.linalg.norm(np.cross(new_axis, axis)) <= 1e-8:
         # If this relative is valid, then axis[0] ~ 1 while  axis[1] = axis[2] = 0
-        newAxis[0] = 0.0
-        newAxis[1] = 1.0
+        new_axis[0] = 0.0
+        new_axis[1] = 1.0
 
     # print(newAxis)
 
     # Step 2: remove the projection of the newAxis on the axis direction
-    newAxis -= axis * np.dot(axis, newAxis)
-    newAxis /= np.linalg.norm(newAxis)
+    new_axis -= axis * np.dot(axis, new_axis)
+    new_axis /= np.linalg.norm(new_axis)
 
     # print(newAxis)
 
     # Step 2: get the other vector though cross project
-    newAxis2 = np.cross(axis, newAxis)
+    new_axis2 = np.cross(axis, new_axis)
 
     # Construct the matrix
     rotMat = np.zeros((3, 3))
-    rotMat += np.outer(axis, axis) + np.cos(angleRadian) * (np.outer(newAxis, newAxis) + np.outer(newAxis2, newAxis2))
-    rotMat += np.sin(angleRadian) * (np.outer(newAxis2, newAxis) - np.outer(newAxis, newAxis2))
+    rotMat += np.outer(axis, axis) + np.cos(angleRadian) * (np.outer(new_axis, new_axis) + np.outer(new_axis2, new_axis2))
+    rotMat += np.sin(angleRadian) * (np.outer(new_axis2, new_axis) - np.outer(new_axis, new_axis2))
 
     return rotMat
 
