@@ -1,3 +1,8 @@
+# Announce of abandon of this repo:
+I am a part-time and amateur developer of hard X-ray simulation software.
+As time goes by, I realize that this repo is becoming so complicated that I cannot maintain it anymore.
+Therefore, I decide to create a newer version and keep everything in this repo frozen. 
+
 # Warning:
 My x-y-z coordinate convention is different from the SLAC convention!
 

@@ -468,6 +468,77 @@ def get_rocking_curve_channelcut_around_axis(kin,
             kout_2)
 
 
+def get_rocking_curve_channelcut_around_axis_bandwidth_integrated(kin,
+                                                                  rotation_axis,
+                                                                  channelcut,
+                                                                  scan_range,
+                                                                  scan_number,
+                                                                  ):
+    """
+
+    :param kin:
+    :param channelcut
+    :param scan_range:
+    :param scan_number:
+    :return:
+    """
+
+    # ------------------------------------------------------------
+    #          Step 0: Generate h_array and normal_array for the scanning
+    # ------------------------------------------------------------
+    h_array_1 = np.zeros((scan_number, 3), dtype=np.float64)
+    normal_array_1 = np.zeros((scan_number, 3), dtype=np.float64)
+
+    h_array_2 = np.zeros((scan_number, 3), dtype=np.float64)
+    normal_array_2 = np.zeros((scan_number, 3), dtype=np.float64)
+
+    # Get the scanning angle
+    angles = np.linspace(start=-scan_range / 2, stop=scan_range / 2, num=scan_number)
+
+    for idx in range(scan_number):
+        rot_mat = util.get_rotmat_around_axis(angleRadian=angles[idx], axis=rotation_axis)
+        # print(rot_mat)
+        # print(np.linalg.det(rot_mat))
+
+        h_array_1[idx] = rot_mat.dot(channelcut.crystal_list[0].h)
+        normal_array_1[idx] = rot_mat.dot(channelcut.crystal_list[0].normal)
+
+        h_array_2[idx] = rot_mat.dot(channelcut.crystal_list[1].h)
+        normal_array_2[idx] = rot_mat.dot(channelcut.crystal_list[1].normal)
+
+    # Create holder to save the reflectivity and output momentum
+    kin_grid = np.zeros_like(h_array_1, dtype=np.float64)
+    kin_grid[:, 0] = kin[0]
+    kin_grid[:, 1] = kin[1]
+    kin_grid[:, 2] = kin[2]
+
+    # Maybe it is still faster if we choose to trade time with memory
+
+    (reflect_sigma_1,
+     reflect_pi_1,
+     b_factor_1,
+     kout_1) = get_bragg_reflectivity_per_entry(kin=kin_grid,
+                                                thickness=channelcut.crystal_list[0].thickness,
+                                                crystal_h=h_array_1,
+                                                normal=normal_array_1,
+                                                chi_dict=channelcut.crystal_list[0].chi_dict)
+
+    (reflect_sigma_2,
+     reflect_pi_2,
+     b_factor_2,
+     kout_2) = get_bragg_reflectivity_per_entry(kin=kout_1,
+                                                thickness=channelcut.crystal_list[1].thickness,
+                                                crystal_h=h_array_2,
+                                                normal=normal_array_2,
+                                                chi_dict=channelcut.crystal_list[1].chi_dict)
+
+    return (angles,
+            reflect_sigma_1 * reflect_sigma_2,
+            reflect_pi_1 * reflect_pi_2,
+            b_factor_1 * b_factor_2,
+            kout_2)
+
+
 # -------------------------------------------------------------
 #               Alignment
 # -------------------------------------------------------------

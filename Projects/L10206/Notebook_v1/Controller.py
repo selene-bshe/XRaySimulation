@@ -161,7 +161,7 @@ class XppController:
         controllerUtil.plot_mono_rocking(controller=self, ax_mono_t1=ax_mono_t1, ax_mono_t2=ax_mono_t2)
 
     def plot_mono_optics(self, ax, show_trajectory=False, xlim=None, ylim=None):
-        controllerUtil.plot_mono_optics(controller=self, ax=ax, show_trajectory=show_trajectory,  xlim=xlim, ylim=ylim)
+        controllerUtil.plot_mono_optics(controller=self, ax=ax, show_trajectory=show_trajectory, xlim=xlim, ylim=ylim)
 
     def plot_miniSD_table(self, ax, xlim=None, ylim=None, show_trajectory=False):
         controllerUtil.plot_miniSD_table(controller=self, ax=ax, xlim=xlim, ylim=ylim, show_trajectory=show_trajectory)
@@ -182,6 +182,9 @@ class XppController:
 
     def get_sample_kout(self):
         return controllerUtil.get_sample_kout(controller=self)
+
+    def get_reflectivity(self):
+        return controllerUtil.get_reflectivity(controller=self)
 
     def show_cc(self):
         self.cc_shutter = True

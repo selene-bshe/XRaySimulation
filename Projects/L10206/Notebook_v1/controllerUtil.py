@@ -773,8 +773,8 @@ def align_miniSD(controller):
         (angles1, reflect_sigma1,
          reflect_pi1, b_factor1, kout1) = DeviceSimu.get_rocking_curve_channelcut_around_axis(
             kin=kin,
-            scan_range=np.deg2rad(0.2),
-            scan_number=10 ** 3,
+            scan_range=np.deg2rad(0.1),
+            scan_number=10 ** 4 * 3,
             rotation_axis=tower[0].th.rotation_axis,
             channelcut=tower[0].optics, )
 
@@ -800,8 +800,8 @@ def align_miniSD(controller):
         (angles1, reflect_sigma1,
          reflect_pi1, b_factor1, kout1) = DeviceSimu.get_rocking_curve_channelcut_around_axis(
             kin=kin,
-            scan_range=np.deg2rad(0.2),
-            scan_number=10 ** 3,
+            scan_range=np.deg2rad(0.1),
+            scan_number=10 ** 4 * 3,
             rotation_axis=tower[0].th.rotation_axis,
             channelcut=tower[0].optics, )
 
@@ -827,8 +827,8 @@ def align_miniSD(controller):
         (angles1, reflect_sigma1,
          reflect_pi1, b_factor1, kout1) = DeviceSimu.get_rocking_curve_channelcut_around_axis(
             kin=kin,
-            scan_range=np.deg2rad(0.2),
-            scan_number=10 ** 3,
+            scan_range=np.deg2rad(0.1),
+            scan_number=10 ** 4 * 3,
             rotation_axis=tower[0].rotation_axis,
             channelcut=tower[1])
 
@@ -862,7 +862,7 @@ def get_miniSD_rocking(controller):
         # Step 2, get the rocking curve around the motion axis for the two crystals.
         (angles1, reflect_sigma1, reflect_pi1, b_factor1, kout1
          ) = DeviceSimu.get_rocking_curve_channelcut_around_axis(
-            kin=kin, scan_range=np.deg2rad(0.2), scan_number=10 ** 3,
+            kin=kin, scan_range=np.deg2rad(0.004), scan_number=10 ** 3,
             rotation_axis=tower[0].th.rotation_axis, channelcut=tower[0].optics, )
 
         # Get the target bragg peak
@@ -884,7 +884,7 @@ def get_miniSD_rocking(controller):
         (angles1, reflect_sigma1,
          reflect_pi1, b_factor1, kout1) = DeviceSimu.get_rocking_curve_channelcut_around_axis(
             kin=kin,
-            scan_range=np.deg2rad(0.2),
+            scan_range=np.deg2rad(0.004),
             scan_number=10 ** 3,
             rotation_axis=tower[0].th.rotation_axis,
             channelcut=tower[0].optics, )
@@ -908,7 +908,7 @@ def get_miniSD_rocking(controller):
         (angles1, reflect_sigma1,
          reflect_pi1, b_factor1, kout1) = DeviceSimu.get_rocking_curve_channelcut_around_axis(
             kin=kin,
-            scan_range=np.deg2rad(0.2),
+            scan_range=np.deg2rad(0.004),
             scan_number=10 ** 3,
             rotation_axis=tower[0].rotation_axis,
             channelcut=tower[1])
@@ -922,6 +922,338 @@ def get_miniSD_rocking(controller):
         # Record the current rocking curve
         tower[3][:] = (np.copy(angles1), np.square(np.abs(reflect_sigma1)) / np.abs(b_factor1))
         kin = np.copy(kout1[index])
+
+
+def get_reflectivity(controller):
+    energy_range = 5e-3
+    num = 5000
+
+    # Get the kout after the XPP mono
+    _, kout, _ = DeviceSimu.get_lightpath(device_list=[controller.mono_t1.optics, controller.mono_t2.optics],
+                                          kin=controller.gaussian_pulse.k0,
+                                          initial_point=controller.gaussian_pulse.x0,
+                                          final_plane_point=np.array([0, 0, 10e6]),
+                                          final_plane_normal=np.array([0, 0, -1]))
+    kout = kout[-1]
+
+    # ----------------------------------------------
+    # Get the CC branch efficiency curve
+    kz_grid = util.kev_to_wavevec_length(energy=np.linspace(-energy_range, energy_range, num) + 11)
+    kin_array = np.zeros((num, 3))
+    kin_array[:, 2] = kz_grid[:]
+
+    # Fine adjustment according to dynamical diffraction theory
+    kin_array += controller.g1.grating_m1.momentum_transfer[np.newaxis, :]
+
+    # Get the device_list
+    device_list = controller.t1.optics.crystal_list + controller.t6.optics.crystal_list
+
+    (total_efficiency_holder,
+     efficiency_holder,
+     kout_holder) = DeviceSimu.get_output_efficiency_curve(device_list=device_list,
+                                                           kin_list=kin_array)
+    cc_efficiency = np.copy(total_efficiency_holder)
+    cc1_efficiency = np.copy(efficiency_holder[:, 0] * efficiency_holder[:, 1])
+    cc6_efficiency = np.copy(efficiency_holder[:, 2] * efficiency_holder[:, 3])
+
+    # ----------------------------------------------
+    # Get the CC branch efficiency curve
+    kz_grid = util.kev_to_wavevec_length(energy=np.linspace(-energy_range, energy_range, num) + 11)
+    kin_array = np.zeros((num, 3))
+    kin_array[:, 2] = kz_grid[:]
+
+    # Fine adjustment according to dynamical diffraction theory
+    kin_array += controller.g1.grating_1.momentum_transfer[np.newaxis, :]
+
+    # Get the device_list
+    device_list = (controller.t2.optics.crystal_list + controller.t3.optics.crystal_list
+                   + controller.t45.optics1.crystal_list + controller.t45.optics2.crystal_list)
+
+    (total_efficiency_holder,
+     efficiency_holder,
+     kout_holder) = DeviceSimu.get_output_efficiency_curve(device_list=device_list,
+                                                           kin_list=kin_array)
+
+    vcc_efficiency = np.copy(total_efficiency_holder)
+    cc2_efficiency = np.copy(efficiency_holder[:, 0] * efficiency_holder[:, 1])
+    cc3_efficiency = np.copy(efficiency_holder[:, 2] * efficiency_holder[:, 3])
+    cc4_efficiency = np.copy(efficiency_holder[:, 3] * efficiency_holder[:, 4])
+    cc5_efficiency = np.copy(efficiency_holder[:, 5] * efficiency_holder[:, 6])
+
+    return {"cc": cc_efficiency,
+            "vcc": vcc_efficiency,
+            "cc1": cc1_efficiency,
+            "cc2": cc2_efficiency,
+            "cc3": cc3_efficiency,
+            "cc4": cc4_efficiency,
+            "cc5": cc5_efficiency,
+            "cc6": cc6_efficiency,
+            "energy": np.linspace(-energy_range, energy_range, num) + 11,
+            }
+
+
+def get_diode_readout(pulse_energy, ratio, noise_level):
+    randomSeed = int(time.time() * 1e6) % 65536
+    np.random.seed(randomSeed)
+
+    reading = pulse_energy * ratio + noise_level * np.random.rand(1)
+
+    return reading
+
+
+
+# -------------------------------------------------------------------
+#      Align the miniSD with SASE pulse
+# -------------------------------------------------------------------
+def align_miniSD_SASE(controller):
+    # Get the kout after the XPP mono
+    _, kout, _ = DeviceSimu.get_lightpath(device_list=[controller.mono_t1.optics, controller.mono_t2.optics],
+                                          kin=controller.gaussian_pulse.k0,
+                                          initial_point=controller.gaussian_pulse.x0,
+                                          final_plane_point=np.array([0, 0, 10e6]),
+                                          final_plane_normal=np.array([0, 0, -1]))
+    kout = kout[-1]
+
+    # Get the geometry bragg angle
+    bragg = util.get_bragg_angle(wave_length=np.pi * 2 / controller.gaussian_pulse.klen0, plane_distance=si220['d'])
+    bragg_list = [bragg, bragg, bragg, bragg, bragg, bragg]
+
+    # Step 1, move the mono1 th to the geometric Bragg angle
+    _ = controller.t1.th_umv(target=bragg_list[0])
+    _ = controller.t2.th_umv(target=bragg_list[1])
+    _ = controller.t3.th_umv(target=bragg_list[2])
+    _ = controller.t45.th1_umv(target=bragg_list[3])
+    _ = controller.t45.th2_umv(target=bragg_list[4])
+    _ = controller.t6.th_umv(target=bragg_list[5])
+
+    # Fine adjustment according to dynamical diffraction theory
+    kin = np.copy(kout + controller.g1.grating_m1.momentum_transfer)
+
+    # Get a finite energy bandwidth +- 0.25 eV bandwidth with 100 points. In this case, we have 5meV resolution
+    combo = [[controller.t1, controller.t1_rocking, bragg_list[0]],
+             [controller.t6, controller.t6_rocking, bragg_list[-1]], ]
+    for tower in combo:
+        # Step 2, get the rocking curve around the motion axis for the two crystals.
+        (angles1, reflect_sigma1,
+         reflect_pi1, b_factor1, kout1) = DeviceSimu.get_rocking_curve_channelcut_around_axis(
+            kin=kin,
+            scan_range=np.deg2rad(0.1),
+            scan_number=10 ** 4 * 3,
+            rotation_axis=tower[0].th.rotation_axis,
+            channelcut=tower[0].optics, )
+
+        # Get the target bragg peak
+        fwhm, angle_adjust, index = util.get_fwhm(coordinate=angles1,
+                                                  curve_values=np.square(np.abs(reflect_sigma1)),
+                                                  center=True,
+                                                  get_index=True)
+        # Move the crystal to the target path
+        _ = tower[0].th_umv(target=tower[2] + angle_adjust)
+
+        # Record the current rocking curve
+        tower[1][:] = [np.copy(angles1 - angle_adjust), np.square(np.abs(reflect_sigma1)) / np.abs(b_factor1)]
+        kin = np.copy(kout1[index])
+
+    # Align vcc2 and vcc3
+    # Fine adjustment according to dynamical diffraction theory
+    kin = np.copy(kout + controller.g1.grating_1.momentum_transfer)
+    combo = [[controller.t2, controller.t2_rocking, bragg_list[1]],
+             [controller.t3, controller.t3_rocking, bragg_list[2]], ]
+    for tower in combo:
+        # Step 2, get the rocking curve around the motion axis for the two crystals.
+        (angles1, reflect_sigma1,
+         reflect_pi1, b_factor1, kout1) = DeviceSimu.get_rocking_curve_channelcut_around_axis(
+            kin=kin,
+            scan_range=np.deg2rad(0.1),
+            scan_number=10 ** 4 * 3,
+            rotation_axis=tower[0].th.rotation_axis,
+            channelcut=tower[0].optics, )
+
+        # Get the target bragg peak
+        fwhm, angle_adjust, index = util.get_fwhm(coordinate=angles1,
+                                                  curve_values=np.square(np.abs(reflect_sigma1)),
+                                                  center=True,
+                                                  get_index=True)
+        # Move the crystal to the target path
+        _ = tower[0].th_umv(target=tower[2] + angle_adjust)
+
+        # Record the current rocking curve
+        tower[1][:] = [np.copy(angles1 - angle_adjust), np.square(np.abs(reflect_sigma1)) / np.abs(b_factor1)]
+        kin = np.copy(kout1[index])
+
+    # Align vcc4 and vcc5
+    # Fine adjustment according to dynamical diffraction theory
+    combo = [[controller.t45.th1, controller.t45.optics1, controller.t45.th1_umv, controller.t4_rocking, bragg_list[3]],
+             [controller.t45.th2, controller.t45.optics2, controller.t45.th2_umv, controller.t5_rocking,
+              bragg_list[4]], ]
+    for tower in combo:
+        # Step 2, get the rocking curve around the motion axis for the two crystals.
+        (angles1, reflect_sigma1,
+         reflect_pi1, b_factor1, kout1) = DeviceSimu.get_rocking_curve_channelcut_around_axis(
+            kin=kin,
+            scan_range=np.deg2rad(0.1),
+            scan_number=10 ** 4 * 3,
+            rotation_axis=tower[0].rotation_axis,
+            channelcut=tower[1])
+
+        # Get the target bragg peak
+        fwhm, angle_adjust, index = util.get_fwhm(coordinate=angles1,
+                                                  curve_values=np.square(np.abs(reflect_sigma1)),
+                                                  center=True,
+                                                  get_index=True)
+        # Move the crystal to the target path
+        _ = tower[2](target=tower[4] + angle_adjust)
+
+        # Record the current rocking curve
+        tower[3][:] = (np.copy(angles1 - angle_adjust), np.square(np.abs(reflect_sigma1)) / np.abs(b_factor1))
+        kin = np.copy(kout1[index])
+
+
+def get_miniSD_rocking(controller):
+    # Get the kout after the XPP mono
+    _, kout, _ = DeviceSimu.get_lightpath(device_list=[controller.mono_t1.optics, controller.mono_t2.optics],
+                                          kin=controller.gaussian_pulse.k0,
+                                          initial_point=controller.gaussian_pulse.x0,
+                                          final_plane_point=np.array([0, 0, 10e6]),
+                                          final_plane_normal=np.array([0, 0, -1]))
+    kout = kout[-1]
+
+    # Fine adjustment according to dynamical diffraction theory
+    kin = np.copy(kout + controller.g1.grating_m1.momentum_transfer)
+    combo = [[controller.t1, controller.t1_rocking],
+             [controller.t6, controller.t6_rocking], ]
+    for tower in combo:
+        # Step 2, get the rocking curve around the motion axis for the two crystals.
+        (angles1, reflect_sigma1, reflect_pi1, b_factor1, kout1
+         ) = DeviceSimu.get_rocking_curve_channelcut_around_axis(
+            kin=kin, scan_range=np.deg2rad(0.004), scan_number=10 ** 3,
+            rotation_axis=tower[0].th.rotation_axis, channelcut=tower[0].optics, )
+
+        # Get the target bragg peak
+        (fwhm, angle_adjust, index
+         ) = util.get_fwhm(coordinate=angles1, curve_values=np.square(np.abs(reflect_sigma1)),
+                           center=True, get_index=True)
+
+        # Record the current rocking curve
+        tower[1][:] = [np.copy(angles1), np.square(np.abs(reflect_sigma1)) / np.abs(b_factor1)]
+        kin = np.copy(kout1[index])
+
+    # Align vcc2 and vcc3
+    # Fine adjustment according to dynamical diffraction theory
+    kin = np.copy(kout + controller.g1.grating_1.momentum_transfer)
+    combo = [[controller.t2, controller.t2_rocking],
+             [controller.t3, controller.t3_rocking], ]
+    for tower in combo:
+        # Step 2, get the rocking curve around the motion axis for the two crystals.
+        (angles1, reflect_sigma1,
+         reflect_pi1, b_factor1, kout1) = DeviceSimu.get_rocking_curve_channelcut_around_axis(
+            kin=kin,
+            scan_range=np.deg2rad(0.004),
+            scan_number=10 ** 3,
+            rotation_axis=tower[0].th.rotation_axis,
+            channelcut=tower[0].optics, )
+
+        # Get the target bragg peak
+        fwhm, angle_adjust, index = util.get_fwhm(coordinate=angles1,
+                                                  curve_values=np.square(np.abs(reflect_sigma1)),
+                                                  center=True,
+                                                  get_index=True)
+
+        # Record the current rocking curve
+        tower[1][:] = [np.copy(angles1), np.square(np.abs(reflect_sigma1)) / np.abs(b_factor1)]
+        kin = np.copy(kout1[index])
+
+    # Align vcc4 and vcc5
+    # Fine adjustment according to dynamical diffraction theory
+    combo = [[controller.t45.th1, controller.t45.optics1, controller.t45.th1_umv, controller.t4_rocking],
+             [controller.t45.th2, controller.t45.optics2, controller.t45.th2_umv, controller.t5_rocking], ]
+    for tower in combo:
+        # Step 2, get the rocking curve around the motion axis for the two crystals.
+        (angles1, reflect_sigma1,
+         reflect_pi1, b_factor1, kout1) = DeviceSimu.get_rocking_curve_channelcut_around_axis(
+            kin=kin,
+            scan_range=np.deg2rad(0.004),
+            scan_number=10 ** 3,
+            rotation_axis=tower[0].rotation_axis,
+            channelcut=tower[1])
+
+        # Get the target bragg peak
+        fwhm, angle_adjust, index = util.get_fwhm(coordinate=angles1,
+                                                  curve_values=np.square(np.abs(reflect_sigma1)),
+                                                  center=True,
+                                                  get_index=True)
+
+        # Record the current rocking curve
+        tower[3][:] = (np.copy(angles1), np.square(np.abs(reflect_sigma1)) / np.abs(b_factor1))
+        kin = np.copy(kout1[index])
+
+
+def get_reflectivity(controller):
+    energy_range = 5e-3
+    num = 5000
+
+    # Get the kout after the XPP mono
+    _, kout, _ = DeviceSimu.get_lightpath(device_list=[controller.mono_t1.optics, controller.mono_t2.optics],
+                                          kin=controller.gaussian_pulse.k0,
+                                          initial_point=controller.gaussian_pulse.x0,
+                                          final_plane_point=np.array([0, 0, 10e6]),
+                                          final_plane_normal=np.array([0, 0, -1]))
+    kout = kout[-1]
+
+    # ----------------------------------------------
+    # Get the CC branch efficiency curve
+    kz_grid = util.kev_to_wavevec_length(energy=np.linspace(-energy_range, energy_range, num) + 11)
+    kin_array = np.zeros((num, 3))
+    kin_array[:, 2] = kz_grid[:]
+
+    # Fine adjustment according to dynamical diffraction theory
+    kin_array += controller.g1.grating_m1.momentum_transfer[np.newaxis, :]
+
+    # Get the device_list
+    device_list = controller.t1.optics.crystal_list + controller.t6.optics.crystal_list
+
+    (total_efficiency_holder,
+     efficiency_holder,
+     kout_holder) = DeviceSimu.get_output_efficiency_curve(device_list=device_list,
+                                                           kin_list=kin_array)
+    cc_efficiency = np.copy(total_efficiency_holder)
+    cc1_efficiency = np.copy(efficiency_holder[:, 0] * efficiency_holder[:, 1])
+    cc6_efficiency = np.copy(efficiency_holder[:, 2] * efficiency_holder[:, 3])
+
+    # ----------------------------------------------
+    # Get the CC branch efficiency curve
+    kz_grid = util.kev_to_wavevec_length(energy=np.linspace(-energy_range, energy_range, num) + 11)
+    kin_array = np.zeros((num, 3))
+    kin_array[:, 2] = kz_grid[:]
+
+    # Fine adjustment according to dynamical diffraction theory
+    kin_array += controller.g1.grating_1.momentum_transfer[np.newaxis, :]
+
+    # Get the device_list
+    device_list = (controller.t2.optics.crystal_list + controller.t3.optics.crystal_list
+                   + controller.t45.optics1.crystal_list + controller.t45.optics2.crystal_list)
+
+    (total_efficiency_holder,
+     efficiency_holder,
+     kout_holder) = DeviceSimu.get_output_efficiency_curve(device_list=device_list,
+                                                           kin_list=kin_array)
+
+    vcc_efficiency = np.copy(total_efficiency_holder)
+    cc2_efficiency = np.copy(efficiency_holder[:, 0] * efficiency_holder[:, 1])
+    cc3_efficiency = np.copy(efficiency_holder[:, 2] * efficiency_holder[:, 3])
+    cc4_efficiency = np.copy(efficiency_holder[:, 3] * efficiency_holder[:, 4])
+    cc5_efficiency = np.copy(efficiency_holder[:, 5] * efficiency_holder[:, 6])
+
+    return {"cc": cc_efficiency,
+            "vcc": vcc_efficiency,
+            "cc1": cc1_efficiency,
+            "cc2": cc2_efficiency,
+            "cc3": cc3_efficiency,
+            "cc4": cc4_efficiency,
+            "cc5": cc5_efficiency,
+            "cc6": cc6_efficiency,
+            "energy": np.linspace(-energy_range, energy_range, num) + 11,
+            }
 
 
 def get_diode_readout(pulse_energy, ratio, noise_level):
